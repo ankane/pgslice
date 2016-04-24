@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require "pgslice"
+begin
+  PgSlice::Client.new(ARGV).perform
+rescue PgSlice::Error => e
+  abort e.message
+rescue Interrupt => e
+  # do nothing
+end
