@@ -4,7 +4,7 @@ Postgres partitioning as easy as pie
 
 ## Install
 
-Run
+Run:
 
 ```sh
 gem install pgslice
@@ -64,13 +64,15 @@ gem install pgslice
 
 ## Adding Partitions
 
+To add partitions, use:
+
 ```sh
 pgslice add_partitions <table> --future 3
 ```
 
 ## Additional Commands
 
-To undo prep and delete partitions, use:
+To undo prep (which will delete partitions), use:
 
 ```sh
 pgslice unprep <table>
