@@ -86,6 +86,8 @@ pgslice unswap <table>
 
 ## Sample Output
 
+`pgslice` prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
+
 ```console
 $ pgslice prep locations created_at day
 BEGIN;
@@ -137,10 +139,6 @@ ALTER TABLE locations_intermediate RENAME TO locations;
 
 COMMIT;
 ```
-
-## Reference
-
-Use the `--dry-run` option to generate SQL without executing it on the server.
 
 ## Upgrading
 
