@@ -186,7 +186,8 @@ CREATE TABLE #{partition_name}
       log_sql "/*"
       log_sql "#{source_table} max #{primary_key}: #{max_source_id}"
       log_sql "#{dest_table} max #{primary_key}: #{max_dest_id}"
-      log_sql "time period: #{starting_time.to_date} -> #{ending_time.to_date}"
+      log_sql "#{field} min date: #{starting_time.to_date}"
+      log_sql "#{field} max date: #{ending_time.to_date - 1}"
       log_sql "*/"
       log_sql
 
