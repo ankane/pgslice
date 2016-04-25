@@ -93,7 +93,7 @@ $ pgslice prep locations created_at day
 BEGIN;
 
 CREATE TABLE locations_intermediate (
-  LIKE locations INCLUDING INDEXES INCLUDING DEFAULTS
+  LIKE locations INCLUDING ALL
 );
 
 CREATE FUNCTION locations_insert_trigger()
@@ -116,17 +116,17 @@ $ pgslice add_partitions locations --intermediate --past 1 --future 1
 BEGIN;
 
 CREATE TABLE locations_20160423 (
-  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  LIKE locations_intermediate INCLUDING ALL,
   CHECK (created_at >= '2016-04-23'::date AND created_at < '2016-04-24'::date)
 ) INHERITS (locations_intermediate);
 
 CREATE TABLE locations_20160424 (
-  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  LIKE locations_intermediate INCLUDING ALL,
   CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date)
 ) INHERITS (locations_intermediate);
 
 CREATE TABLE locations_20160425 (
-  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  LIKE locations_intermediate INCLUDING ALL,
   CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date)
 ) INHERITS (locations_intermediate);
 

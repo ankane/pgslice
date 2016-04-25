@@ -63,7 +63,7 @@ module PgSlice
 
       queries << <<-SQL
 CREATE TABLE #{intermediate_table} (
-  LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS
+  LIKE #{table} INCLUDING ALL
 );
       SQL
 
@@ -130,7 +130,7 @@ FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
 
         queries << <<-SQL
 CREATE TABLE #{partition_name} (
-  LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS,
+  LIKE #{table} INCLUDING ALL,
   CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date)
 ) INHERITS (#{table});
         SQL
