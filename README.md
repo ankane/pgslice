@@ -159,6 +159,11 @@ gem install specific_install
 gem specific_install ankane/pgslice
 ```
 
+## TODO
+
+- Command to sync index changes with partitions
+- Disable indexing for faster `fill`
+
 ## Contributing
 
 Everyone is encouraged to help improve this project. Here are a few ways you can help:
