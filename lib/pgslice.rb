@@ -288,12 +288,14 @@ CREATE TABLE #{partition_name} (
     def run_queries(queries)
       connection.transaction do
         execute("SET client_min_messages TO warning")
+        log_sql "BEGIN;"
         log_sql
         queries.each do |query|
           log_sql query
           log_sql
           execute(query) unless options[:dry_run]
         end
+        log_sql "COMMIT;"
       end
     end
 
