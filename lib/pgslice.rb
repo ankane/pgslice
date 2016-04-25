@@ -15,6 +15,8 @@ module PgSlice
     }
 
     def initialize(args)
+      $stdout.sync = true
+      $stderr.sync = true
       parse_args(args)
       @command = @arguments.shift
     end
@@ -181,18 +183,22 @@ CREATE TABLE #{partition_name}
       fields = columns(source_table).join(", ")
       batch_size = options[:batch_size]
 
-      log "Overview"
-      log "#{source_table} max #{primary_key}: #{max_source_id}"
-      log "#{dest_table} max #{primary_key}: #{max_dest_id}"
-      log "time period: #{starting_time.to_date} -> #{ending_time.to_date}"
-      log
+      log_sql "/*"
+      log_sql "#{source_table} max #{primary_key}: #{max_source_id}"
+      log_sql "#{dest_table} max #{primary_key}: #{max_dest_id}"
+      log_sql "time period: #{starting_time.to_date} -> #{ending_time.to_date}"
+      log_sql "*/"
+      log_sql
 
-      log "Batches"
       while starting_id <= max_source_id
-        log "#{starting_id}..#{[starting_id + batch_size - 1, max_source_id].min}"
+        query = <<-SQL
+INSERT INTO #{dest_table} (#{fields})
+    SELECT #{fields} FROM #{source_table}
+    WHERE #{primary_key} >= #{starting_id} AND #{primary_key} < #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
+        SQL
 
-        query = "INSERT INTO #{dest_table} (#{fields}) SELECT #{fields} FROM #{source_table} WHERE #{primary_key} >= #{starting_id} AND #{primary_key} < #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date"
-        log query if options[:debug]
+        log_sql(query)
+        log_sql
         execute(query)
 
         starting_id += batch_size
