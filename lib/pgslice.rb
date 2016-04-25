@@ -59,8 +59,6 @@ module PgSlice
       abort "Column not found: #{column}" unless columns(table).include?(column)
       abort "Invalid period: #{period}" unless SQL_FORMAT[period.to_sym]
 
-      log "Creating #{intermediate_table} from #{table}"
-
       queries = []
 
       queries << <<-SQL
@@ -97,8 +95,6 @@ FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       abort "Usage: pgslice unprep <table>" if arguments.length != 1
       abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
 
-      log "Dropping #{intermediate_table}"
-
       queries = [
         "DROP TABLE #{intermediate_table} CASCADE;",
         "DROP FUNCTION #{trigger_name}();"
@@ -130,7 +126,6 @@ FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
         partition_name = "#{original_table}_#{day.strftime(name_format)}"
         next if table_exists?(partition_name)
 
-        log "Creating #{partition_name} from #{table}"
         date_format = "%Y-%m-%d"
 
         queries << <<-SQL
@@ -205,9 +200,6 @@ CREATE TABLE #{partition_name} (
       abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
       abort "Table already exists: #{retired_table}" if table_exists?(retired_table)
 
-      log "Renaming #{table} to #{retired_table}"
-      log "Renaming #{intermediate_table} to #{table}"
-
       queries = [
         "ALTER TABLE #{table} RENAME TO #{retired_table};",
         "ALTER TABLE #{intermediate_table} RENAME TO #{table};"
@@ -224,9 +216,6 @@ CREATE TABLE #{partition_name} (
       abort "Table not found: #{table}" unless table_exists?(table)
       abort "Table not found: #{retired_table}" unless table_exists?(retired_table)
       abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
-
-      log "Renaming #{table} to #{intermediate_table}"
-      log "Renaming #{retired_table} to #{table}"
 
       queries = [
         "ALTER TABLE #{table} RENAME TO #{intermediate_table};",
@@ -294,8 +283,7 @@ CREATE TABLE #{partition_name} (
     def run_queries(queries)
       connection.transaction do
         execute("SET client_min_messages TO warning")
-        log
-        log "============================== SQL =============================="
+        log "============================== RAN =============================="
         queries.each do |query|
           log
           log query
