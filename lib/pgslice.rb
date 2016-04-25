@@ -253,6 +253,10 @@ CREATE TABLE #{partition_name} (
       $stderr.puts message
     end
 
+    def log_sql(message = nil)
+      $stdout.puts message
+    end
+
     def abort(message)
       raise PgSlice::Error, message
     end
@@ -284,10 +288,10 @@ CREATE TABLE #{partition_name} (
     def run_queries(queries)
       connection.transaction do
         execute("SET client_min_messages TO warning")
-        log
+        log_sql
         queries.each do |query|
-          log query
-          log
+          log_sql query
+          log_sql
           execute(query) unless options[:dry_run]
         end
       end
