@@ -1,6 +1,7 @@
 ## 0.1.5 [unreleased]
 
 - Removed `activesupport` dependency for speed
+- Fixed `fill` for months
 
 ## 0.1.4
 
