@@ -64,26 +64,26 @@ module PgSlice
       queries = []
 
       queries << <<-SQL
-        CREATE TABLE #{intermediate_table} (
-          LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS
-        )
+CREATE TABLE #{intermediate_table} (
+  LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS
+);
       SQL
 
       sql_format = SQL_FORMAT[period.to_sym]
       queries << <<-SQL
-        CREATE FUNCTION #{trigger_name}()
-        RETURNS trigger AS $$
-        BEGIN
-          EXECUTE 'INSERT INTO public.#{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
-          RETURN NULL;
-        END;
-        $$ LANGUAGE plpgsql
+CREATE FUNCTION #{trigger_name}()
+RETURNS trigger AS $$
+BEGIN
+  EXECUTE 'INSERT INTO public.#{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
       SQL
 
       queries << <<-SQL
-        CREATE TRIGGER #{trigger_name}
-        BEFORE INSERT ON #{intermediate_table}
-        FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}()
+CREATE TRIGGER #{trigger_name}
+BEFORE INSERT ON #{intermediate_table}
+FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       SQL
 
       run_queries(queries)
@@ -100,8 +100,8 @@ module PgSlice
       log "Dropping #{intermediate_table}"
 
       queries = [
-        "DROP TABLE #{intermediate_table} CASCADE",
-        "DROP FUNCTION #{trigger_name}()"
+        "DROP TABLE #{intermediate_table} CASCADE;",
+        "DROP FUNCTION #{trigger_name}();"
       ]
       run_queries(queries)
     end
@@ -134,10 +134,10 @@ module PgSlice
         date_format = "%Y-%m-%d"
 
         queries << <<-SQL
-          CREATE TABLE #{partition_name} (
-            LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS,
-            CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date)
-          ) INHERITS (#{table})
+CREATE TABLE #{partition_name} (
+  LIKE #{table} INCLUDING INDEXES INCLUDING DEFAULTS,
+  CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date)
+) INHERITS (#{table});
         SQL
       end
 
@@ -209,8 +209,8 @@ module PgSlice
       log "Renaming #{intermediate_table} to #{table}"
 
       queries = [
-        "ALTER TABLE #{table} RENAME TO #{retired_table}",
-        "ALTER TABLE #{intermediate_table} RENAME TO #{table}"
+        "ALTER TABLE #{table} RENAME TO #{retired_table};",
+        "ALTER TABLE #{intermediate_table} RENAME TO #{table};"
       ]
       run_queries(queries)
     end
@@ -229,8 +229,8 @@ module PgSlice
       log "Renaming #{retired_table} to #{table}"
 
       queries = [
-        "ALTER TABLE #{table} RENAME TO #{intermediate_table}",
-        "ALTER TABLE #{retired_table} RENAME TO #{table}"
+        "ALTER TABLE #{table} RENAME TO #{intermediate_table};",
+        "ALTER TABLE #{retired_table} RENAME TO #{table};"
       ]
       run_queries(queries)
     end
@@ -259,7 +259,7 @@ module PgSlice
 
     # output
 
-    def log(message)
+    def log(message = nil)
       $stderr.puts message
     end
 
@@ -294,7 +294,11 @@ module PgSlice
     def run_queries(queries)
       connection.transaction do
         execute("SET client_min_messages TO warning")
-        queries.map(&:squish).each do |query|
+        log
+        log "============================== SQL =============================="
+        queries.each do |query|
+          log
+          log query
           execute(query)
         end
       end
