@@ -122,6 +122,9 @@ FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       days = range.map { |n| today + (n * inc) }
       queries = []
 
+      index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
+      primary_key = self.primary_key(table)
+
       days.each do |day|
         partition_name = "#{original_table}_#{day.strftime(name_format)}"
         next if table_exists?(partition_name)
@@ -130,10 +133,15 @@ FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
 
         queries << <<-SQL
 CREATE TABLE #{partition_name} (
-  LIKE #{table} INCLUDING ALL,
   CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date)
 ) INHERITS (#{table});
         SQL
+
+        queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});"
+
+        index_defs.each do |index_def|
+          queries << index_def.sub(" ON #{original_table} USING ", " ON #{partition_name} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+        end
       end
 
       run_queries(queries) if queries.any?
