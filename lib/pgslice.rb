@@ -214,6 +214,11 @@ CREATE TABLE #{partition_name} (
         "ALTER TABLE #{table} RENAME TO #{retired_table};",
         "ALTER TABLE #{intermediate_table} RENAME TO #{table};"
       ]
+
+      self.sequences(table).each do |sequence|
+        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY public.#{table}.#{sequence["related_column"]};"
+      end
+
       run_queries(queries)
     end
 
@@ -231,6 +236,11 @@ CREATE TABLE #{partition_name} (
         "ALTER TABLE #{table} RENAME TO #{intermediate_table};",
         "ALTER TABLE #{retired_table} RENAME TO #{table};"
       ]
+
+      self.sequences(table).each do |sequence|
+        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY public.#{table}.#{sequence["related_column"]};"
+      end
+
       run_queries(queries)
     end
 
@@ -349,6 +359,24 @@ CREATE TABLE #{partition_name} (
 
     def has_trigger?(trigger_name, table)
       execute("SELECT 1 FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, "public.#{table}"]).any?
+    end
+
+    # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
+    def sequences(table)
+      query = <<-SQL
+        SELECT
+          a.attname as related_column,
+          s.relname as sequence_name
+        FROM pg_class s
+          JOIN pg_depend d ON d.objid = s.oid
+          JOIN pg_class t ON d.objid = s.oid AND d.refobjid = t.oid
+          JOIN pg_attribute a ON (d.refobjid, d.refobjsubid) = (a.attrelid, a.attnum)
+          JOIN pg_namespace n ON n.oid = s.relnamespace
+        WHERE s.relkind = 'S'
+          AND n.nspname = 'public'
+          AND t.relname = $1
+      SQL
+      execute(query, [table])
     end
 
     # helpers

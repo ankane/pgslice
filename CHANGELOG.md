@@ -1,3 +1,7 @@
+## 0.1.4 [unreleased]
+
+- Added sequence ownership
+
 ## 0.1.3
 
 - Fixed table inheritance

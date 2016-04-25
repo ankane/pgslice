@@ -150,6 +150,8 @@ ALTER TABLE locations RENAME TO locations_retired;
 
 ALTER TABLE locations_intermediate RENAME TO locations;
 
+ALTER SEQUENCE locations_id_seq OWNED BY public.locations.id;
+
 COMMIT;
 ```
 
