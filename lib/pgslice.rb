@@ -171,8 +171,9 @@ CREATE TABLE #{partition_name} (
       batch_size = options[:batch_size]
 
       log "Overview"
-      log "#{primary_key}: #{starting_id} -> #{max_source_id}"
-      log "time: #{starting_time.to_date} -> #{ending_time.to_date}"
+      log "#{source_table} max #{primary_key}: #{max_source_id}"
+      log "#{dest_table} max #{primary_key}: #{max_dest_id}"
+      log "time period: #{starting_time.to_date} -> #{ending_time.to_date}"
       log
 
       log "Batches"
