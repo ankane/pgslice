@@ -1,7 +1,6 @@
 require "pgslice/version"
 require "slop"
 require "pg"
-require "active_support/all"
 
 module PgSlice
   class Error < StandardError; end
@@ -117,21 +116,22 @@ CREATE TRIGGER #{trigger_name}
       # ensure table has trigger
       abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
 
-      period, field, name_format, inc, today = settings_from_table(original_table, table)
-
-      days = range.map { |n| today + (n * inc) }
-      queries = []
-
       index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
 
-      days.each do |day|
-        partition_name = "#{original_table}_#{day.strftime(name_format)}"
+      queries = []
+
+      period, field = settings_from_table(original_table, table)
+      today = round_date(Date.today, period)
+      range.each do |n|
+        day = advance_date(today, period, n)
+
+        partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
         next if table_exists?(partition_name)
 
         queries << <<-SQL
 CREATE TABLE #{partition_name}
-    (CHECK (#{field} >= #{sql_date(day)} AND #{field} < #{sql_date(day + inc)}))
+    (CHECK (#{field} >= #{sql_date(day)} AND #{field} < #{sql_date(advance_date(day, period, 1))}))
     INHERITS (#{table});
         SQL
 
@@ -161,11 +161,12 @@ CREATE TABLE #{partition_name}
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
-      period, field, name_format, inc, today = settings_from_table(table, dest_table)
+      period, field = settings_from_table(table, dest_table)
+      name_format = self.name_format(period)
 
       existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
-      starting_time = DateTime.strptime(existing_tables.first.last(8), name_format)
-      ending_time = DateTime.strptime(existing_tables.last.last(8), name_format) + inc
+      starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
+      ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
 
       primary_key = self.primary_key(table)
       max_source_id = max_id(source_table, primary_key)
@@ -412,6 +413,35 @@ INSERT INTO #{dest_table} (#{fields})
       "'#{time.strftime("%Y-%m-%d")}'::date"
     end
 
+    def name_format(period)
+      case period.to_sym
+      when :day
+        "%Y%m%d"
+      else
+        "%Y%m"
+      end
+    end
+
+    def round_date(date, period)
+      date = date.to_date
+      case period.to_sym
+      when :day
+        date
+      else
+        Date.new(date.year, date.month)
+      end
+    end
+
+    def advance_date(date, period, count = 1)
+      date = date.to_date
+      case period.to_sym
+      when :day
+        date.next_day(count)
+      else
+        date.next_month(count)
+      end
+    end
+
     def settings_from_table(original_table, table)
       trigger_name = self.trigger_name(original_table)
       function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]["pg_get_functiondef"]
@@ -419,20 +449,7 @@ INSERT INTO #{dest_table} (#{fields})
       abort "Could not read settings" unless sql_format
       period = sql_format[0]
       field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
-
-      today = Time.now
-      case period
-      when :day
-        name_format = "%Y%m%d"
-        inc = 1.day
-        today = today.beginning_of_day
-      else
-        name_format = "%Y%m"
-        inc = 1.month
-        today = today.beginning_of_month
-      end
-
-      [period, field, name_format, inc, today]
+      [period, field]
     end
   end
 end

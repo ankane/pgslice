@@ -1,3 +1,7 @@
+## 0.1.5 [unreleased]
+
+- Removed `activesupport` dependency for speed
+
 ## 0.1.4
 
 - Added sequence ownership

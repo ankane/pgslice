@@ -19,7 +19,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "slop", ">= 4.2.0"
   spec.add_dependency "pg"
-  spec.add_dependency "activesupport"
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake"
