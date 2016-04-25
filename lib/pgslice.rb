@@ -284,10 +284,10 @@ CREATE TABLE #{partition_name} (
     def run_queries(queries)
       connection.transaction do
         execute("SET client_min_messages TO warning")
-        log "============================== RAN =============================="
+        log
         queries.each do |query|
-          log
           log query
+          log
           execute(query) unless options[:dry_run]
         end
       end

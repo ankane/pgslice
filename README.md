@@ -84,6 +84,51 @@ To undo swap, use:
 pgslice unswap <table>
 ```
 
+## Sample Output
+
+```console
+$ pgslice prep locations created_at day
+
+CREATE TABLE locations_intermediate (
+  LIKE locations INCLUDING INDEXES INCLUDING DEFAULTS
+);
+
+CREATE FUNCTION locations_insert_trigger()
+RETURNS trigger AS $$
+BEGIN
+  EXECUTE 'INSERT INTO public.locations_' || to_char(NEW.created_at, 'YYYYMMDD') || ' VALUES ($1.*)' USING NEW;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER locations_insert_trigger
+BEFORE INSERT ON locations_intermediate
+FOR EACH ROW EXECUTE PROCEDURE locations_insert_trigger();
+
+$ pgslice add_partitions locations --intermediate --past 1 --future 1
+
+CREATE TABLE locations_20160423 (
+  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  CHECK (created_at >= '2016-04-23'::date AND created_at < '2016-04-24'::date)
+) INHERITS (locations_intermediate);
+
+CREATE TABLE locations_20160424 (
+  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date)
+) INHERITS (locations_intermediate);
+
+CREATE TABLE locations_20160425 (
+  LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
+  CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date)
+) INHERITS (locations_intermediate);
+
+$ pgslice swap locations
+
+ALTER TABLE locations RENAME TO locations_retired;
+
+ALTER TABLE locations_intermediate RENAME TO locations;
+```
+
 ## Upgrading
 
 Run:
