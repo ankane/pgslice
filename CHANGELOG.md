@@ -1,6 +1,7 @@
-## 0.1.2 [unreleased]
+## 0.1.2
 
 - Added `--dry-run` option
+- Print sql to stdout instead of stderr
 
 ## 0.1.1
 
