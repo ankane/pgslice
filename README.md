@@ -88,6 +88,7 @@ pgslice unswap <table>
 
 ```console
 $ pgslice prep locations created_at day
+BEGIN;
 
 CREATE TABLE locations_intermediate (
   LIKE locations INCLUDING INDEXES INCLUDING DEFAULTS
@@ -105,7 +106,10 @@ CREATE TRIGGER locations_insert_trigger
 BEFORE INSERT ON locations_intermediate
 FOR EACH ROW EXECUTE PROCEDURE locations_insert_trigger();
 
+COMMIT;
+
 $ pgslice add_partitions locations --intermediate --past 1 --future 1
+BEGIN;
 
 CREATE TABLE locations_20160423 (
   LIKE locations_intermediate INCLUDING INDEXES INCLUDING DEFAULTS,
@@ -122,11 +126,16 @@ CREATE TABLE locations_20160425 (
   CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date)
 ) INHERITS (locations_intermediate);
 
+COMMIT;
+
 $ pgslice swap locations
+BEGIN;
 
 ALTER TABLE locations RENAME TO locations_retired;
 
 ALTER TABLE locations_intermediate RENAME TO locations;
+
+COMMIT;
 ```
 
 ## Reference
