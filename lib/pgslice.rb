@@ -298,7 +298,6 @@ CREATE TABLE #{partition_name} (
           execute(query) unless options[:dry_run]
         end
         log_sql "COMMIT;"
-        log_sql
       end
     end
 

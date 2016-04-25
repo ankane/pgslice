@@ -109,7 +109,9 @@ BEFORE INSERT ON locations_intermediate
 FOR EACH ROW EXECUTE PROCEDURE locations_insert_trigger();
 
 COMMIT;
+```
 
+```console
 $ pgslice add_partitions locations --intermediate --past 1 --future 1
 BEGIN;
 
@@ -129,7 +131,9 @@ CREATE TABLE locations_20160425 (
 ) INHERITS (locations_intermediate);
 
 COMMIT;
+```
 
+```console
 $ pgslice swap locations
 BEGIN;
 
