@@ -1,6 +1,6 @@
-## 0.1.3 [unreleased]
+## 0.1.3
 
-- Use `INCLUDING ALL` instead of `INCLUDING INDEXES INCLUDING DEFAULTS`
+- Fixed table inheritance
 
 ## 0.1.2
 
