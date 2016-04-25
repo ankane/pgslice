@@ -250,8 +250,8 @@ CREATE TABLE #{partition_name}
         o.boolean "--swapped"
         o.boolean "--debug"
         o.float "--sleep"
-        o.integer "--future", default: 3
-        o.integer "--past", default: 3
+        o.integer "--future", default: 0
+        o.integer "--past", default: 0
         o.integer "--batch-size", default: 10000
         o.boolean "--dry-run", default: false
         o.on "-v", "--version", "print the version" do

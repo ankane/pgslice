@@ -1,6 +1,7 @@
 ## 0.1.4 [unreleased]
 
 - Added sequence ownership
+- Default to 0 for `--past` and `--future` options
 
 ## 0.1.3
 

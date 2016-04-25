@@ -153,6 +153,21 @@ ALTER SEQUENCE locations_id_seq OWNED BY locations.id;
 COMMIT;
 ```
 
+```console
+$ pgslice add_partitions locations --future 2
+BEGIN;
+
+CREATE TABLE locations_20160426
+    (CHECK (created_at >= '2016-04-26'::date AND created_at < '2016-04-27'::date))
+    INHERITS (locations);
+
+ALTER TABLE locations_20160426 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON locations_20160426 USING btree (updated_at, shopper_id);
+
+COMMIT;
+```
+
 ## Upgrading
 
 Run:
