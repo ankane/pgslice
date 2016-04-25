@@ -177,8 +177,8 @@ CREATE TABLE #{partition_name}
         end
 
       if max_dest_id == 0 && !options[:swapped]
-        max_dest_id = min_id(source_table, primary_key, field, starting_time)
-        max_dest_id -= 1 if max_dest_id > 0
+        min_source_id = min_id(source_table, primary_key, field, starting_time)
+        max_dest_id = min_source_id - 1 if min_source_id
       end
 
       starting_id = max_dest_id
