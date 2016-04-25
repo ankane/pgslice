@@ -129,6 +129,10 @@ ALTER TABLE locations RENAME TO locations_retired;
 ALTER TABLE locations_intermediate RENAME TO locations;
 ```
 
+## Reference
+
+Use the `--dry-run` option to generate SQL without executing it on the server.
+
 ## Upgrading
 
 Run:
