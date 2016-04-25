@@ -137,7 +137,7 @@ CREATE TABLE #{partition_name} (
 ) INHERITS (#{table});
         SQL
 
-        queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});"
+        queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});" if primary_key
 
         index_defs.each do |index_def|
           queries << index_def.sub(" ON #{original_table} USING ", " ON #{partition_name} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
