@@ -183,19 +183,14 @@ CREATE TABLE #{partition_name}
       fields = columns(source_table).join(", ")
       batch_size = options[:batch_size]
 
-      log_sql "/*"
-      log_sql "#{source_table} max #{primary_key}: #{max_source_id}"
-      log_sql "#{dest_table} max #{primary_key}: #{max_dest_id}"
-      log_sql "#{field} min date: #{starting_time.to_date}"
-      log_sql "#{field} max date: #{ending_time.to_date - 1}"
-      log_sql "*/"
-      log_sql
-
+      i = 1
+      batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
       while starting_id <= max_source_id
         query = <<-SQL
+/* #{i} of #{batch_count} */
 INSERT INTO #{dest_table} (#{fields})
     SELECT #{fields} FROM #{source_table}
-    WHERE #{primary_key} >= #{starting_id} AND #{primary_key} < #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
+    WHERE #{primary_key} >= #{starting_id} AND #{primary_key} <= #{starting_id + batch_size - 1} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
         SQL
 
         log_sql(query)
@@ -203,6 +198,7 @@ INSERT INTO #{dest_table} (#{fields})
         execute(query)
 
         starting_id += batch_size
+        i += 1
 
         if options[:sleep] && starting_id <= max_source_id
           sleep(options[:sleep])
