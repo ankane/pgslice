@@ -129,11 +129,9 @@ CREATE TRIGGER #{trigger_name}
         partition_name = "#{original_table}_#{day.strftime(name_format)}"
         next if table_exists?(partition_name)
 
-        date_format = "%Y-%m-%d"
-
         queries << <<-SQL
 CREATE TABLE #{partition_name}
-    (CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date))
+    (CHECK (#{field} >= #{sql_date(day)} AND #{field} < #{sql_date(day + inc)}))
     INHERITS (#{table});
         SQL
 
@@ -165,7 +163,6 @@ CREATE TABLE #{partition_name}
 
       period, field, name_format, inc, today = settings_from_table(table, dest_table)
 
-      date_format = "%Y-%m-%d"
       existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
       starting_time = DateTime.strptime(existing_tables.first.last(8), name_format)
       ending_time = DateTime.strptime(existing_tables.last.last(8), name_format) + inc
@@ -179,6 +176,11 @@ CREATE TABLE #{partition_name}
           max_id(dest_table, primary_key)
         end
 
+      if max_dest_id == 0 && !options[:swapped]
+        max_dest_id = min_id(source_table, primary_key, field, starting_time)
+        max_dest_id -= 1 if max_dest_id > 0
+      end
+
       starting_id = max_dest_id
       fields = columns(source_table).join(", ")
       batch_size = options[:batch_size]
@@ -190,7 +192,7 @@ CREATE TABLE #{partition_name}
 /* #{i} of #{batch_count} */
 INSERT INTO #{dest_table} (#{fields})
     SELECT #{fields} FROM #{source_table}
-    WHERE #{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
+    WHERE #{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size} AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}
         SQL
 
         log_sql(query)
@@ -365,6 +367,11 @@ INSERT INTO #{dest_table} (#{fields})
       execute(query)[0]["max"].to_i
     end
 
+    def min_id(table, primary_key, column, starting_time)
+      query = "SELECT MIN(#{primary_key}) FROM #{table} WHERE #{column} >= #{sql_date(starting_time)}"
+      execute(query)[0]["min"].to_i
+    end
+
     def has_trigger?(trigger_name, table)
       execute("SELECT 1 FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).any?
     end
@@ -399,6 +406,10 @@ INSERT INTO #{dest_table} (#{fields})
 
     def retired_name(table)
       "#{table}_retired"
+    end
+
+    def sql_date(time)
+      "'#{time.strftime("%Y-%m-%d")}'::date"
     end
 
     def settings_from_table(original_table, table)
