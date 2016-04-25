@@ -99,7 +99,7 @@ CREATE TABLE locations_intermediate (
 CREATE FUNCTION locations_insert_trigger()
 RETURNS trigger AS $$
 BEGIN
-  EXECUTE 'INSERT INTO public.locations_' || to_char(NEW.created_at, 'YYYYMMDD') || ' VALUES ($1.*)' USING NEW;
+  EXECUTE 'INSERT INTO locations_' || to_char(NEW.created_at, 'YYYYMMDD') || ' VALUES ($1.*)' USING NEW;
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
@@ -150,7 +150,7 @@ ALTER TABLE locations RENAME TO locations_retired;
 
 ALTER TABLE locations_intermediate RENAME TO locations;
 
-ALTER SEQUENCE locations_id_seq OWNED BY public.locations.id;
+ALTER SEQUENCE locations_id_seq OWNED BY locations.id;
 
 COMMIT;
 ```

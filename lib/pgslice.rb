@@ -72,7 +72,7 @@ CREATE TABLE #{intermediate_table} (
 CREATE FUNCTION #{trigger_name}()
 RETURNS trigger AS $$
 BEGIN
-  EXECUTE 'INSERT INTO public.#{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
+  EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
@@ -216,7 +216,7 @@ CREATE TABLE #{partition_name} (
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY public.#{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
       run_queries(queries)
@@ -238,7 +238,7 @@ CREATE TABLE #{partition_name} (
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY public.#{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
       run_queries(queries)
@@ -358,7 +358,7 @@ CREATE TABLE #{partition_name} (
     end
 
     def has_trigger?(trigger_name, table)
-      execute("SELECT 1 FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, "public.#{table}"]).any?
+      execute("SELECT 1 FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).any?
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
