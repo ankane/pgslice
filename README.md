@@ -205,6 +205,7 @@ gem specific_install ankane/pgslice
 
 - Command to sync index changes with partitions
 - Disable indexing for faster `fill`
+- ETA for `fill`
 
 ## Contributing
 
