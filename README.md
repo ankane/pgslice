@@ -145,17 +145,17 @@ $ pgslice fill locations
 /* 1 of 3 */
 INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
     SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id >= 1 AND id <= 10000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
 
 /* 2 of 3 */
 INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
     SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id >= 10001 AND id <= 20000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
 
 /* 3 of 3 */
 INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
     SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id >= 20001 AND id <= 30000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
 ```
 
 ```console

@@ -179,18 +179,18 @@ CREATE TABLE #{partition_name}
           max_id(dest_table, primary_key)
         end
 
-      starting_id = max_dest_id + 1
+      starting_id = max_dest_id
       fields = columns(source_table).join(", ")
       batch_size = options[:batch_size]
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
-      while starting_id <= max_source_id
+      while starting_id < max_source_id
         query = <<-SQL
 /* #{i} of #{batch_count} */
 INSERT INTO #{dest_table} (#{fields})
     SELECT #{fields} FROM #{source_table}
-    WHERE #{primary_key} >= #{starting_id} AND #{primary_key} <= #{starting_id + batch_size - 1} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
+    WHERE #{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date
         SQL
 
         log_sql(query)
