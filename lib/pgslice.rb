@@ -164,13 +164,18 @@ CREATE TABLE #{partition_name}
       period, field, name_format, inc, today = settings_from_table(table, dest_table)
 
       date_format = "%Y-%m-%d"
-      existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }
+      existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
       starting_time = DateTime.strptime(existing_tables.first.last(8), name_format)
       ending_time = DateTime.strptime(existing_tables.last.last(8), name_format) + inc
 
       primary_key = self.primary_key(table)
       max_source_id = max_id(source_table, primary_key)
-      max_dest_id = max_id(dest_table, primary_key)
+      max_dest_id =
+        if options[:swapped]
+          max_id(dest_table, primary_key, below: max_source_id)
+        else
+          max_id(dest_table, primary_key)
+        end
 
       starting_id = max_dest_id + 1
       fields = columns(source_table).join(", ")
@@ -351,8 +356,10 @@ CREATE TABLE #{partition_name}
       row && row["attname"]
     end
 
-    def max_id(table, primary_key)
-      execute("SELECT MAX(#{primary_key}) FROM #{table}")[0]["max"].to_i
+    def max_id(table, primary_key, below: nil)
+      query = "SELECT MAX(#{primary_key}) FROM #{table}"
+      query << " WHERE #{primary_key} <= #{below}" if below
+      execute(query)[0]["max"].to_i
     end
 
     def has_trigger?(trigger_name, table)

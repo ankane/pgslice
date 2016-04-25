@@ -2,6 +2,7 @@
 
 - Added sequence ownership
 - Default to 0 for `--past` and `--future` options
+- Better `fill` with `--swapped`
 
 ## 0.1.3
 
