@@ -130,9 +130,9 @@ CREATE TRIGGER #{trigger_name}
         date_format = "%Y-%m-%d"
 
         queries << <<-SQL
-CREATE TABLE #{partition_name} (
-    CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date)
-) INHERITS (#{table});
+CREATE TABLE #{partition_name}
+    (CHECK (#{field} >= '#{day.strftime(date_format)}'::date AND #{field} < '#{(day + inc).strftime(date_format)}'::date))
+    INHERITS (#{table});
         SQL
 
         queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});" if primary_key

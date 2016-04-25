@@ -113,25 +113,25 @@ COMMIT;
 $ pgslice add_partitions locations --intermediate --past 1 --future 1
 BEGIN;
 
-CREATE TABLE locations_20160423 (
-    CHECK (created_at >= '2016-04-23'::date AND created_at < '2016-04-24'::date)
-) INHERITS (locations_intermediate);
+CREATE TABLE locations_20160423
+    (CHECK (created_at >= '2016-04-23'::date AND created_at < '2016-04-24'::date))
+    INHERITS (locations_intermediate);
 
 ALTER TABLE locations_20160423 ADD PRIMARY KEY (id);
 
 CREATE INDEX ON locations_20160423 USING btree (updated_at, shopper_id);
 
-CREATE TABLE locations_20160424 (
-    CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date)
-) INHERITS (locations_intermediate);
+CREATE TABLE locations_20160424
+    (CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date))
+    INHERITS (locations_intermediate);
 
 ALTER TABLE locations_20160424 ADD PRIMARY KEY (id);
 
 CREATE INDEX ON locations_20160424 USING btree (updated_at, shopper_id);
 
-CREATE TABLE locations_20160425 (
-    CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date)
-) INHERITS (locations_intermediate);
+CREATE TABLE locations_20160425
+    (CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date))
+    INHERITS (locations_intermediate);
 
 ALTER TABLE locations_20160425 ADD PRIMARY KEY (id);
 
