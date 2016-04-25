@@ -170,22 +170,23 @@ CREATE TABLE #{partition_name} (
       fields = columns(source_table).join(", ")
       batch_size = options[:batch_size]
 
-      if starting_id < max_source_id
-        log "#{primary_key}: #{starting_id} -> #{max_source_id}"
-        log "time: #{starting_time.to_date} -> #{ending_time.to_date}"
+      log "Overview"
+      log "#{primary_key}: #{starting_id} -> #{max_source_id}"
+      log "time: #{starting_time.to_date} -> #{ending_time.to_date}"
+      log
 
-        while starting_id < max_source_id
-          log "#{starting_id}..#{[starting_id + batch_size - 1, max_source_id].min}"
+      log "Batches"
+      while starting_id <= max_source_id
+        log "#{starting_id}..#{[starting_id + batch_size - 1, max_source_id].min}"
 
-          query = "INSERT INTO #{dest_table} (#{fields}) SELECT #{fields} FROM #{source_table} WHERE #{primary_key} >= #{starting_id} AND #{primary_key} < #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date"
-          log query if options[:debug]
-          execute(query)
+        query = "INSERT INTO #{dest_table} (#{fields}) SELECT #{fields} FROM #{source_table} WHERE #{primary_key} >= #{starting_id} AND #{primary_key} < #{starting_id + batch_size} AND #{field} >= '#{starting_time.strftime(date_format)}'::date AND #{field} < '#{ending_time.strftime(date_format)}'::date"
+        log query if options[:debug]
+        execute(query)
 
-          starting_id += batch_size
+        starting_id += batch_size
 
-          if options[:sleep] && starting_id < max_source_id
-            sleep(options[:sleep])
-          end
+        if options[:sleep] && starting_id <= max_source_id
+          sleep(options[:sleep])
         end
       end
     end
