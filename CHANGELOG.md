@@ -1,6 +1,10 @@
+## 0.1.2 [unreleased]
+
+- Added `--dry-run` option
+
 ## 0.1.1
 
-- Add sql commands to output
+- Added sql commands to output
 
 ## 0.1.0
 

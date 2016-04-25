@@ -235,6 +235,7 @@ CREATE TABLE #{partition_name} (
         o.integer "--future", default: 3
         o.integer "--past", default: 3
         o.integer "--batch-size", default: 10000
+        o.boolean "--dry-run", default: false
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
@@ -287,7 +288,7 @@ CREATE TABLE #{partition_name} (
         queries.each do |query|
           log
           log query
-          execute(query)
+          execute(query) unless options[:dry_run]
         end
       end
     end
