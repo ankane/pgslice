@@ -54,11 +54,18 @@ module PgSlice
       intermediate_table = "#{table}_intermediate"
       trigger_name = self.trigger_name(table)
 
-      abort "Usage: pgslice prep <table> <column> <period>" if arguments.length != 3
+      if options[:no_partition]
+        abort "Usage: pgslice prep <table> --no-partition" if arguments.length != 1
+      else
+        abort "Usage: pgslice prep <table> <column> <period>" if arguments.length != 3
+      end
       abort "Table not found: #{table}" unless table_exists?(table)
       abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
-      abort "Column not found: #{column}" unless columns(table).include?(column)
-      abort "Invalid period: #{period}" unless SQL_FORMAT[period.to_sym]
+
+      unless options[:no_partition]
+        abort "Column not found: #{column}" unless columns(table).include?(column)
+        abort "Invalid period: #{period}" unless SQL_FORMAT[period.to_sym]
+      end
 
       queries = []
 
@@ -66,22 +73,24 @@ module PgSlice
 CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
       SQL
 
-      sql_format = SQL_FORMAT[period.to_sym]
-      queries << <<-SQL
-CREATE FUNCTION #{trigger_name}()
-    RETURNS trigger AS $$
-    BEGIN
-        EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
-      SQL
+      unless options[:no_partition]
+        sql_format = SQL_FORMAT[period.to_sym]
+        queries << <<-SQL
+  CREATE FUNCTION #{trigger_name}()
+      RETURNS trigger AS $$
+      BEGIN
+          EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
+          RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+        SQL
 
-      queries << <<-SQL
-CREATE TRIGGER #{trigger_name}
-    BEFORE INSERT ON #{intermediate_table}
-    FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
-      SQL
+        queries << <<-SQL
+  CREATE TRIGGER #{trigger_name}
+      BEFORE INSERT ON #{intermediate_table}
+      FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
+        SQL
+      end
 
       run_queries(queries)
     end
@@ -122,6 +131,7 @@ CREATE TRIGGER #{trigger_name}
       queries = []
 
       period, field = settings_from_table(original_table, table)
+      abort "Could not read settings" unless period
       today = round_date(Date.today, period)
       range.each do |n|
         day = advance_date(today, period, n)
@@ -162,11 +172,14 @@ CREATE TABLE #{partition_name}
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
       period, field = settings_from_table(table, dest_table)
-      name_format = self.name_format(period)
 
-      existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
-      starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
-      ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
+      if period
+        name_format = self.name_format(period)
+
+        existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
+        starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
+        ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
+      end
 
       primary_key = self.primary_key(table)
       max_source_id = max_id(source_table, primary_key)
@@ -178,8 +191,12 @@ CREATE TABLE #{partition_name}
         end
 
       if max_dest_id == 0 && !options[:swapped]
-        min_source_id = min_id(source_table, primary_key, field, starting_time)
-        max_dest_id = min_source_id - 1 if min_source_id
+        if options[:start]
+          max_dest_id = options[:start]
+        else
+          min_source_id = min_id(source_table, primary_key, field, starting_time)
+          max_dest_id = min_source_id - 1 if min_source_id
+        end
       end
 
       starting_id = max_dest_id
@@ -189,11 +206,16 @@ CREATE TABLE #{partition_name}
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
       while starting_id < max_source_id
+        where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
+        if period
+          where << " AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}"
+        end
+
         query = <<-SQL
 /* #{i} of #{batch_count} */
 INSERT INTO #{dest_table} (#{fields})
     SELECT #{fields} FROM #{source_table}
-    WHERE #{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size} AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}
+    WHERE #{where}
         SQL
 
         log_sql(query)
@@ -265,6 +287,8 @@ INSERT INTO #{dest_table} (#{fields})
         o.integer "--past", default: 0
         o.integer "--batch-size", default: 10000
         o.boolean "--dry-run", default: false
+        o.boolean "--no-partition", default: false
+        o.integer "--start"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
@@ -369,8 +393,9 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def min_id(table, primary_key, column, starting_time)
-      query = "SELECT MIN(#{primary_key}) FROM #{table} WHERE #{column} >= #{sql_date(starting_time)}"
-      execute(query)[0]["min"].to_i
+      query = "SELECT MIN(#{primary_key}) FROM #{table}"
+      query << " WHERE #{column} >= #{sql_date(starting_time)}" if starting_time
+      (execute(query)[0]["min"] || 1).to_i
     end
 
     def has_trigger?(trigger_name, table)
@@ -444,9 +469,11 @@ INSERT INTO #{dest_table} (#{fields})
 
     def settings_from_table(original_table, table)
       trigger_name = self.trigger_name(original_table)
-      function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]["pg_get_functiondef"]
+      function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]
+      return [nil, nil] unless function_def
+      function_def = function_def["pg_get_functiondef"]
       sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
-      abort "Could not read settings" unless sql_format
+      return [nil, nil] unless sql_format
       period = sql_format[0]
       field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
       [period, field]

@@ -1,3 +1,7 @@
+## 0.1.6 [unreleased]
+
+- Added `--no-partition` option to `prep`
+
 ## 0.1.5
 
 - Removed `activesupport` dependency for speed
