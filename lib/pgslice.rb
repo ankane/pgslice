@@ -105,7 +105,7 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
 
       queries = [
         "DROP TABLE #{intermediate_table} CASCADE;",
-        "DROP FUNCTION #{trigger_name}();"
+        "DROP FUNCTION IF EXISTS #{trigger_name}();"
       ]
       run_queries(queries)
     end
