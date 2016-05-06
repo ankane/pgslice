@@ -46,6 +46,8 @@ gem install pgslice
 
   Use the `--batch-size` and `--sleep` options to control the speed.
 
+  To sync data across different databases, check out [pgsync](https://github.com/ankane/pgsync).
+
 5. Swap the intermediate table with the original table
 
   ```sh
