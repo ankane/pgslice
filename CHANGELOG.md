@@ -1,6 +1,7 @@
 ## 0.1.6 [unreleased]
 
 - Added `--no-partition` option to `prep`
+- Added `--url` option
 
 ## 0.1.5
 

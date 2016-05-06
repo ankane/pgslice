@@ -289,6 +289,7 @@ INSERT INTO #{dest_table} (#{fields})
         o.boolean "--dry-run", default: false
         o.boolean "--no-partition", default: false
         o.integer "--start"
+        o.string "--url"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
@@ -318,8 +319,9 @@ INSERT INTO #{dest_table} (#{fields})
 
     def connection
       @connection ||= begin
-        abort "Set PGSLICE_URL" unless ENV["PGSLICE_URL"]
-        uri = URI.parse(ENV["PGSLICE_URL"])
+        url = options[:url] || ENV["PGSLICE_URL"]
+        abort "Set PGSLICE_URL or use the --url option" unless url
+        uri = URI.parse(url)
         uri_parser = URI::Parser.new
         config = {
           host: uri.host,
