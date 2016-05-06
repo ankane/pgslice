@@ -72,6 +72,30 @@ To add partitions, use:
 pgslice add_partitions <table> --future 3
 ```
 
+Add this as a cron job to create a new partition each day or month.
+
+```
+# day
+0 0 * * * user pgslice add_partitions <table> --future 3 --url ...
+
+# month
+0 0 1 * * user pgslice add_partitions <table> --future 3 --url ...
+```
+
+Add a monitor to ensure partitions are being created.
+
+```sql
+SELECT 1 FROM
+    pg_catalog.pg_class c
+INNER JOIN
+    pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE
+    c.relkind = 'r' AND
+    n.nspname = 'public' AND
+    c.relname = '<table>_' || to_char(NOW() + INTERVAL '3 days', 'YYYYMMDD')
+    -- for months, use to_char(NOW() + INTERVAL '3 months', 'YYYYMM')
+```
+
 ## Additional Commands
 
 To undo prep (which will delete partitions), use:
