@@ -51,7 +51,8 @@ module PgSlice
 
     def prep
       table, column, period = arguments
-      intermediate_table = "#{table}_intermediate"
+      intermediate_table = intermediate_name(table)
+      intermediate_view = "#{table}_intermediate"
       trigger_name = self.trigger_name(table)
 
       if options[:no_partition]
@@ -74,22 +75,34 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
       SQL
 
       unless options[:no_partition]
+        queries << <<-SQL
+CREATE VIEW #{intermediate_view} AS SELECT * FROM #{intermediate_table};
+        SQL
+
+        primary_key = self.primary_key(table)
+        primary_key_default = column_default(table, primary_key)
+        if primary_key && primary_key_default
+          queries << <<-SQL
+ALTER VIEW #{intermediate_view} ALTER COLUMN #{primary_key} SET DEFAULT #{primary_key_default};
+          SQL
+        end
+
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
-  CREATE FUNCTION #{trigger_name}()
-      RETURNS trigger AS $$
-      BEGIN
-          EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
-          RETURN NULL;
-      END;
-      $$ LANGUAGE plpgsql;
+CREATE FUNCTION #{trigger_name}()
+    RETURNS trigger AS $$
+    BEGIN
+        EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
         SQL
 
         queries << <<-SQL
-  CREATE TRIGGER #{trigger_name}
-      BEFORE INSERT ON #{intermediate_table}
-      FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
-        SQL
+CREATE TRIGGER #{trigger_name}
+    INSTEAD OF INSERT ON #{intermediate_view}
+    FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
+      SQL
       end
 
       run_queries(queries)
@@ -97,7 +110,7 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
 
     def unprep
       table = arguments.first
-      intermediate_table = "#{table}_intermediate"
+      intermediate_table = intermediate_name(table)
       trigger_name = self.trigger_name(table)
 
       abort "Usage: pgslice unprep <table>" if arguments.length != 1
@@ -112,21 +125,23 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
 
     def add_partitions
       original_table = arguments.first
-      table = options[:intermediate] ? "#{original_table}_intermediate" : original_table
+      table = options[:intermediate] ? intermediate_name(original_table) : original_table
       trigger_name = self.trigger_name(original_table)
+      trigger_table = options[:intermediate] ? "#{original_table}_intermediate" : original_table
+      parent_table = options[:intermediate] ? original_table : "#{original_table}_parent"
 
       abort "Usage: pgslice add_partitions <table>" if arguments.length != 1
-      abort "Table not found: #{table}" unless table_exists?(table)
+      abort "Table not found: #{table}" unless table_exists?(table) || view_exists?(table)
 
       future = options[:future]
       past = options[:past]
       range = (-1 * past)..future
 
       # ensure table has trigger
-      abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
+      abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, trigger_table)
 
       index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
-      primary_key = self.primary_key(table)
+      primary_key = self.primary_key(parent_table)
 
       queries = []
 
@@ -142,7 +157,7 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
         queries << <<-SQL
 CREATE TABLE #{partition_name}
     (CHECK (#{field} >= #{sql_date(day)} AND #{field} < #{sql_date(advance_date(day, period, 1))}))
-    INHERITS (#{table});
+    INHERITS (#{parent_table});
         SQL
 
         queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});" if primary_key
@@ -234,20 +249,23 @@ INSERT INTO #{dest_table} (#{fields})
     def swap
       table = arguments.first
       intermediate_table = intermediate_name(table)
+      intermediate_view = "#{table}_intermediate"
       retired_table = retired_name(table)
 
       abort "Usage: pgslice swap <table>" if arguments.length != 1
       abort "Table not found: #{table}" unless table_exists?(table)
       abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
+      abort "View not found: #{intermediate_view}" unless view_exists?(intermediate_view)
       abort "Table already exists: #{retired_table}" if table_exists?(retired_table)
 
       queries = [
         "ALTER TABLE #{table} RENAME TO #{retired_table};",
-        "ALTER TABLE #{intermediate_table} RENAME TO #{table};"
+        "ALTER TABLE #{intermediate_table} RENAME TO #{table}_parent;",
+        "ALTER VIEW #{intermediate_view} RENAME TO #{table};"
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}_parent.#{sequence["related_column"]};"
       end
 
       run_queries(queries)
@@ -256,19 +274,23 @@ INSERT INTO #{dest_table} (#{fields})
     def unswap
       table = arguments.first
       intermediate_table = intermediate_name(table)
+      parent_table = "#{table}_parent"
+      intermediate_view = "#{table}_intermediate"
       retired_table = retired_name(table)
 
       abort "Usage: pgslice unswap <table>" if arguments.length != 1
-      abort "Table not found: #{table}" unless table_exists?(table)
+      abort "View not found: #{table}" unless view_exists?(table)
+      abort "Table not found: #{parent_table}" unless table_exists?(parent_table)
       abort "Table not found: #{retired_table}" unless table_exists?(retired_table)
       abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
 
       queries = [
-        "ALTER TABLE #{table} RENAME TO #{intermediate_table};",
+        "ALTER TABLE #{table} RENAME TO #{intermediate_view};",
+        "ALTER TABLE #{parent_table} RENAME TO #{intermediate_table};",
         "ALTER TABLE #{retired_table} RENAME TO #{table};"
       ]
 
-      self.sequences(table).each do |sequence|
+      self.sequences(parent_table).each do |sequence|
         queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
@@ -363,6 +385,15 @@ INSERT INTO #{dest_table} (#{fields})
       existing_tables(like: table).any?
     end
 
+    def existing_views(like:)
+      query = "SELECT viewname FROM pg_catalog.pg_views WHERE schemaname = $1 AND viewname LIKE $2"
+      execute(query, ["public", like]).map { |r| r["viewname"] }.sort
+    end
+
+    def view_exists?(view)
+      existing_views(like: view).any?
+    end
+
     def columns(table)
       execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1", [table]).map{ |r| r["column_name"] }
     end
@@ -386,6 +417,21 @@ INSERT INTO #{dest_table} (#{fields})
       SQL
       row = execute(query, ["public", table])[0]
       row && row["attname"]
+    end
+
+    def column_default(table, column)
+      query = <<-SQL
+        SELECT
+          column_default
+        FROM
+          information_schema.columns
+        WHERE
+          column_name = $1
+          AND table_schema = $2
+          AND table_name = $3
+      SQL
+      row = execute(query, [column, "public", table])[0]
+      row && row["column_default"]
     end
 
     def max_id(table, primary_key, below: nil)
@@ -429,7 +475,7 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def intermediate_name(table)
-      "#{table}_intermediate"
+      "#{table}_parent_intermediate"
     end
 
     def retired_name(table)
