@@ -212,6 +212,16 @@ CREATE INDEX ON locations_20160426 USING btree (updated_at, shopper_id);
 COMMIT;
 ```
 
+## One Off Tasks
+
+You can also reduce the size of a table without partitioning.
+
+```sh
+pgslice prep <table> --no-partition
+pgslice fill <table> --start 1000 # starting primary key
+pgslice swap <table>
+```
+
 ## Upgrading
 
 Run:
