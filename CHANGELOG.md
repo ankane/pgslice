@@ -1,4 +1,4 @@
-## 0.1.7 [unreleased]
+## 0.1.7
 
 - Added `--source-table` option to `fill`
 
