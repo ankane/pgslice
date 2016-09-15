@@ -76,20 +76,20 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
       unless options[:no_partition]
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
-  CREATE FUNCTION #{trigger_name}()
-      RETURNS trigger AS $$
-      BEGIN
-          EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
-          RETURN NULL;
-      END;
-      $$ LANGUAGE plpgsql;
+CREATE FUNCTION #{trigger_name}()
+    RETURNS trigger AS $$
+    BEGIN
+        EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
         SQL
 
         queries << <<-SQL
-  CREATE TRIGGER #{trigger_name}
-      BEFORE INSERT ON #{intermediate_table}
-      FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
-        SQL
+CREATE TRIGGER #{trigger_name}
+    BEFORE INSERT ON #{intermediate_table}
+    FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
+      SQL
       end
 
       run_queries(queries)
