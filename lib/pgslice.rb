@@ -344,7 +344,7 @@ INSERT INTO #{dest_table} (#{fields})
 
     def run_queries(queries)
       connection.transaction do
-        execute("SET client_min_messages TO warning")
+        execute("SET client_min_messages TO warning") unless options[:dry_run]
         log_sql "BEGIN;"
         log_sql
         queries.each do |query|
