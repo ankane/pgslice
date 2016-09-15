@@ -283,7 +283,6 @@ INSERT INTO #{dest_table} (#{fields})
       opts = Slop.parse(args) do |o|
         o.boolean "--intermediate"
         o.boolean "--swapped"
-        o.boolean "--debug"
         o.float "--sleep"
         o.integer "--future", default: 0
         o.integer "--past", default: 0
