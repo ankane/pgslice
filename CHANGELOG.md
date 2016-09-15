@@ -1,3 +1,7 @@
+## 0.1.7 [unreleased]
+
+- Added `--source-table` option to `fill`
+
 ## 0.1.6
 
 - Added `--no-partition` option to `prep`

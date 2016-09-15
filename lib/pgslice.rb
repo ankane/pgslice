@@ -161,14 +161,13 @@ CREATE TABLE #{partition_name}
       abort "Usage: pgslice fill <table>" if arguments.length != 1
 
       source_table = options[:source_table]
-      dest_table = options[:dest_table]
 
       if options[:swapped]
         source_table ||= retired_name(table)
-        dest_table ||= table
+        dest_table = table
       else
         source_table ||= table
-        dest_table ||= intermediate_name(table)
+        dest_table = intermediate_name(table)
       end
 
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
@@ -294,7 +293,6 @@ INSERT INTO #{dest_table} (#{fields})
         o.integer "--start"
         o.string "--url"
         o.string "--source-table"
-        o.string "--dest-table"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
