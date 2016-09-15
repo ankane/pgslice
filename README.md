@@ -56,7 +56,7 @@ gem install pgslice
 
   The original table is renamed `<table>_retired` and the intermediate table is renamed `<table>`.
 
-6. Fill the rest
+6. Fill the rest (rows inserted between the first fill and the swap)
 
   ```sh
   pgslice fill <table> --swapped
