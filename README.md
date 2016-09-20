@@ -218,12 +218,7 @@ COMMIT;
 
 ## App Changes
 
-### Writes
-
-If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record back. If you need this, you can either:
-
-1. Insert directly into the partition
-2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
+This set up allows your app to read and write from the original table with no knowledge it’s partitioned. However, there are a few things to be aware of.
 
 ### Reads
 
@@ -237,6 +232,13 @@ WHERE
     -- for performance only
     created_at >= '2016-01-01' AND created_at < '2016-01-02'
 ```
+
+### Writes
+
+If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record back. If you need this, you can either:
+
+1. Insert directly into the partition
+2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
 
 ## One Off Tasks
 
