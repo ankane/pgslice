@@ -78,7 +78,7 @@ pgslice add_partitions <table> --future 3
 
 Add this as a cron job to create a new partition each day or month.
 
-```
+```sh
 # day
 0 0 * * * pgslice add_partitions <table> --future 3 --url ...
 
