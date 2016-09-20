@@ -242,7 +242,7 @@ If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rai
 
 ## One Off Tasks
 
-You can also reduce the size of a table without partitioning.
+You can also use pgslice to reduce the size of a table without partitioning by creating a new table, filling it with a subset of records, and swapping it in.
 
 ```sh
 pgslice prep <table> --no-partition
