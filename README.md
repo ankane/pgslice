@@ -1,6 +1,6 @@
 # pgslice
 
-Postgres partitioning as easy as pie. Works great for both new and existing tables with zero downtime.
+Postgres partitioning as easy as pie. Works great for both new and existing tables, with zero downtime and minimal app changes.
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
@@ -218,7 +218,7 @@ COMMIT;
 
 ## App Changes
 
-This set up allows your app to read and write from the original table with no knowledge it’s partitioned. However, there are a few things to be aware of.
+This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
 
 ### Reads
 
