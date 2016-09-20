@@ -216,6 +216,28 @@ CREATE INDEX ON locations_20160426 USING btree (updated_at, shopper_id);
 COMMIT;
 ```
 
+## App Changes
+
+### Writes
+
+If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record back. If you need this, you can either:
+
+1. Insert directly into the partition
+2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
+
+### Reads
+
+When possible, queries should include the column you partition on to limit the number of partitions the database needs to check.  For instance, if you partition on `created_at`, try to include it in queries:
+
+```sql
+SELECT * FROM
+    some_table
+WHERE
+    some_column = 123 AND
+    -- for performance only
+    created_at >= '2016-01-01' AND created_at < '2016-01-02'
+```
+
 ## One Off Tasks
 
 You can also reduce the size of a table without partitioning.
