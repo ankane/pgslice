@@ -222,6 +222,12 @@ This set up allows you to read and write with the original table name with no kn
 
 ### Reads
 
+Ensure `constraint_exclusion` is set to `partition` (default value) or `on`.
+
+```sql
+SHOW constraint_exclusion;
+```
+
 When possible, queries should include the column you partition on to limit the number of partitions the database needs to check.  For instance, if you partition on `created_at`, try to include it in queries:
 
 ```sql
