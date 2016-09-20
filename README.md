@@ -149,7 +149,7 @@ CREATE TABLE locations_20160423
 
 ALTER TABLE locations_20160423 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160423 USING btree (updated_at, shopper_id);
+CREATE INDEX ON locations_20160423 USING btree (shopper_id);
 
 CREATE TABLE locations_20160424
     (CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date))
@@ -157,7 +157,7 @@ CREATE TABLE locations_20160424
 
 ALTER TABLE locations_20160424 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160424 USING btree (updated_at, shopper_id);
+CREATE INDEX ON locations_20160424 USING btree (shopper_id);
 
 CREATE TABLE locations_20160425
     (CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date))
@@ -165,7 +165,7 @@ CREATE TABLE locations_20160425
 
 ALTER TABLE locations_20160425 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160425 USING btree (updated_at, shopper_id);
+CREATE INDEX ON locations_20160425 USING btree (shopper_id);
 
 COMMIT;
 ```
@@ -211,7 +211,7 @@ CREATE TABLE locations_20160426
 
 ALTER TABLE locations_20160426 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160426 USING btree (updated_at, shopper_id);
+CREATE INDEX ON locations_20160426 USING btree (shopper_id);
 
 COMMIT;
 ```
