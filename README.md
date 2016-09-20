@@ -14,13 +14,15 @@ gem install pgslice
 
 ## Steps
 
-1. Specify your database credentials
+1. Ensure the table you want to partition has been created. We’ll refer to this as `<table>`.
+
+2. Specify your database credentials
 
   ```sh
   export PGSLICE_URL=postgres://localhost/myapp_development
   ```
 
-2. Create an intermediate table
+3. Create an intermediate table
 
   ```sh
   pgslice prep <table> <column> <period>
@@ -30,7 +32,7 @@ gem install pgslice
 
   This creates a table named `<table>_intermediate` with the appropriate trigger for partitioning.
 
-3. Add partitions
+4. Add partitions
 
   ```sh
   pgslice add_partitions <table> --intermediate --past 3 --future 3
@@ -40,7 +42,7 @@ gem install pgslice
 
   Use the `--past` and `--future` options to control the number of partitions.
 
-4. *Optional, for tables with data* - Fill the partitions in batches with data from the original table
+5. *Optional, for tables with data* - Fill the partitions in batches with data from the original table
 
   ```sh
   pgslice fill <table>
@@ -50,7 +52,7 @@ gem install pgslice
 
   To sync data across different databases, check out [pgsync](https://github.com/ankane/pgsync).
 
-5. Swap the intermediate table with the original table
+6. Swap the intermediate table with the original table
 
   ```sh
   pgslice swap <table>
@@ -58,13 +60,13 @@ gem install pgslice
 
   The original table is renamed `<table>_retired` and the intermediate table is renamed `<table>`.
 
-6. Fill the rest (rows inserted between the first fill and the swap)
+7. Fill the rest (rows inserted between the first fill and the swap)
 
   ```sh
   pgslice fill <table> --swapped
   ```
 
-7. Archive and drop the original table
+8. Archive and drop the original table
 
 ## Adding Partitions
 
