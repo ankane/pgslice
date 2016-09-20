@@ -265,6 +265,11 @@ gem install specific_install
 gem specific_install ankane/pgslice
 ```
 
+## Reference
+
+- [PostgreSQL Manual](https://www.postgresql.org/docs/current/static/ddl-partitioning.html)
+- [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/Table_partitioning)
+
 ## TODO
 
 - Command to sync index changes with partitions
