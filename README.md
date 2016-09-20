@@ -116,7 +116,7 @@ pgslice unswap <table>
 
 ## Sample Output
 
-`pgslice` prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
+pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
 
 ```console
 $ pgslice prep locations created_at day
