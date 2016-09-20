@@ -1,6 +1,6 @@
 # pgslice
 
-Postgres partitioning as easy as pie. Works great for both new and existing tables.
+Postgres partitioning as easy as pie. Works great for both new and existing tables with zero downtime.
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
