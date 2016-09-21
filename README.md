@@ -6,11 +6,13 @@ Postgres partitioning as easy as pie. Works great for both new and existing tabl
 
 ## Install
 
-Run:
+pgslice is a command line tool. To install, run:
 
 ```sh
 gem install pgslice
 ```
+
+This will give you the `pgslice` command.
 
 ## Steps
 
@@ -281,6 +283,13 @@ gem specific_install ankane/pgslice
 - Command to sync index changes with partitions
 - Disable indexing for faster `fill`
 - ETA for `fill`
+
+## Related Projects
+
+Also check out:
+
+- [PgHero](https://github.com/ankane/pghero) - A performance dashboard for Postgres
+- [pgsync](https://github.com/ankane/pgsync) - Sync Postgres data to your local machine
 
 ## Contributing
 
