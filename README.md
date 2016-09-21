@@ -119,99 +119,99 @@ pgslice unswap <table>
 pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
 
 ```console
-$ pgslice prep locations created_at day
+$ pgslice prep visits created_at month
 BEGIN;
 
-CREATE TABLE locations_intermediate (LIKE locations INCLUDING ALL);
+CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
 
-CREATE FUNCTION locations_insert_trigger()
+CREATE FUNCTION visits_insert_trigger()
     RETURNS trigger AS $$
     BEGIN
-        EXECUTE 'INSERT INTO locations_' || to_char(NEW.created_at, 'YYYYMMDD') || ' VALUES ($1.*)' USING NEW;
+        EXECUTE 'INSERT INTO visits_' || to_char(NEW.created_at, 'YYYYMM') || ' VALUES ($1.*)' USING NEW;
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER locations_insert_trigger
-    BEFORE INSERT ON locations_intermediate
-    FOR EACH ROW EXECUTE PROCEDURE locations_insert_trigger();
+CREATE TRIGGER visits_insert_trigger
+    BEFORE INSERT ON visits_intermediate
+    FOR EACH ROW EXECUTE PROCEDURE visits_insert_trigger();
 
 COMMIT;
 ```
 
 ```console
-$ pgslice add_partitions locations --intermediate --past 1 --future 1
+$ pgslice add_partitions visits --intermediate --past 1 --future 1
 BEGIN;
 
-CREATE TABLE locations_20160423
-    (CHECK (created_at >= '2016-04-23'::date AND created_at < '2016-04-24'::date))
-    INHERITS (locations_intermediate);
+CREATE TABLE visits_201608
+    (CHECK (created_at >= '2016-08-01'::date AND created_at < '2016-09-01'::date))
+    INHERITS (visits_intermediate);
 
-ALTER TABLE locations_20160423 ADD PRIMARY KEY (id);
+ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160423 USING btree (shopper_id);
+CREATE INDEX ON visits_201608 USING btree (user_id);
 
-CREATE TABLE locations_20160424
-    (CHECK (created_at >= '2016-04-24'::date AND created_at < '2016-04-25'::date))
-    INHERITS (locations_intermediate);
+CREATE TABLE visits_201609
+    (CHECK (created_at >= '2016-09-01'::date AND created_at < '2016-10-01'::date))
+    INHERITS (visits_intermediate);
 
-ALTER TABLE locations_20160424 ADD PRIMARY KEY (id);
+ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160424 USING btree (shopper_id);
+CREATE INDEX ON visits_201609 USING btree (user_id);
 
-CREATE TABLE locations_20160425
-    (CHECK (created_at >= '2016-04-25'::date AND created_at < '2016-04-26'::date))
-    INHERITS (locations_intermediate);
+CREATE TABLE visits_201610
+    (CHECK (created_at >= '2016-10-01'::date AND created_at < '2016-11-01'::date))
+    INHERITS (visits_intermediate);
 
-ALTER TABLE locations_20160425 ADD PRIMARY KEY (id);
+ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160425 USING btree (shopper_id);
+CREATE INDEX ON visits_201610 USING btree (user_id);
 
 COMMIT;
 ```
 
 ```console
-$ pgslice fill locations
+$ pgslice fill visits
 /* 1 of 3 */
-INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
-    SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 
 /* 2 of 3 */
-INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
-    SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 
 /* 3 of 3 */
-INSERT INTO locations_intermediate (id, latitude, longitude, created_at)
-    SELECT id, latitude, longitude, created_at FROM locations
-    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-04-23'::date AND created_at < '2016-04-26'::date
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 ```
 
 ```console
-$ pgslice swap locations
+$ pgslice swap visits
 BEGIN;
 
-ALTER TABLE locations RENAME TO locations_retired;
+ALTER TABLE visits RENAME TO visits_retired;
 
-ALTER TABLE locations_intermediate RENAME TO locations;
+ALTER TABLE visits_intermediate RENAME TO visits;
 
-ALTER SEQUENCE locations_id_seq OWNED BY locations.id;
+ALTER SEQUENCE visits_id_seq OWNED BY visits.id;
 
 COMMIT;
 ```
 
 ```console
-$ pgslice add_partitions locations --future 2
+$ pgslice add_partitions visits --future 2
 BEGIN;
 
-CREATE TABLE locations_20160426
-    (CHECK (created_at >= '2016-04-26'::date AND created_at < '2016-04-27'::date))
-    INHERITS (locations);
+CREATE TABLE visits_201611
+    (CHECK (created_at >= '2016-11-01'::date AND created_at < '2016-12-01'::date))
+    INHERITS (visits);
 
-ALTER TABLE locations_20160426 ADD PRIMARY KEY (id);
+ALTER TABLE visits_201611 ADD PRIMARY KEY (id);
 
-CREATE INDEX ON locations_20160426 USING btree (shopper_id);
+CREATE INDEX ON visits_201611 USING btree (user_id);
 
 COMMIT;
 ```
@@ -226,11 +226,11 @@ When possible, queries should include the column you partition on to limit the n
 
 ```sql
 SELECT * FROM
-    some_table
+    visits
 WHERE
-    some_column = 123 AND
-    -- for performance only
-    created_at >= '2016-01-01' AND created_at < '2016-01-02'
+    user_id = 123 AND
+    -- for performance
+    created_at >= '2016-09-01' AND created_at < '2016-09-02'
 ```
 
 For this to be effective, ensure `constraint_exclusion` is set to `partition` (default value) or `on`.
