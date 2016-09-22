@@ -91,7 +91,7 @@ CREATE TRIGGER #{trigger_name}
       SQL
 
         queries << <<-SQL
-COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column: #{column}, period: #{period}';
+COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column:#{column},period:#{period}';
 SQL
       end
 
@@ -136,7 +136,7 @@ SQL
       comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).first
       updated_trigger = true
       if comment
-        field, period = comment["comment"].split(", ").map { |v| v.split(":").last.strip } rescue [nil, nil]
+        field, period = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil]
       end
       unless period
         period, field = settings_from_table(original_table, table)
@@ -172,7 +172,7 @@ CREATE TABLE #{partition_name}
         past_defs = []
         name_format = self.name_format(period)
         existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }
-        existing_tables = (existing_tables + added_partitions).sort
+        existing_tables = (existing_tables + added_partitions).uniq.sort
 
         existing_tables.each do |table|
           day = DateTime.strptime(table.split("_").last, name_format)
