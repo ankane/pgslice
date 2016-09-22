@@ -134,13 +134,13 @@ SQL
       queries = []
 
       comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).first
-      updated_trigger = true
       if comment
         field, period = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil]
       end
+
       unless period
         period, field = settings_from_table(original_table, table)
-        updated_trigger = false
+        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period}';"
       end
       abort "Could not read settings" unless period
       today = round_date(DateTime.now.new_offset(0).to_date, period)
@@ -165,48 +165,46 @@ CREATE TABLE #{partition_name}
         end
       end
 
-      if updated_trigger
-        # update trigger based on existing partitions
-        current_defs = []
-        future_defs = []
-        past_defs = []
-        name_format = self.name_format(period)
-        existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }
-        existing_tables = (existing_tables + added_partitions).uniq.sort
+      # update trigger based on existing partitions
+      current_defs = []
+      future_defs = []
+      past_defs = []
+      name_format = self.name_format(period)
+      existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }
+      existing_tables = (existing_tables + added_partitions).uniq.sort
 
-        existing_tables.each do |table|
-          day = DateTime.strptime(table.split("_").last, name_format)
-          partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
+      existing_tables.each do |table|
+        day = DateTime.strptime(table.split("_").last, name_format)
+        partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
-          sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
-            INSERT INTO #{partition_name} VALUES (NEW.*);"
+        sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
+          INSERT INTO #{partition_name} VALUES (NEW.*);"
 
-          if day.to_date < today
-            past_defs << sql
-          elsif advance_date(day, period, 1) < today
-            current_defs << sql
-          else
-            future_defs << sql
-          end
+        if day.to_date < today
+          past_defs << sql
+        elsif advance_date(day, period, 1) < today
+          current_defs << sql
+        else
+          future_defs << sql
         end
-
-        # order by current period, future periods asc, past periods desc
-        trigger_defs = current_defs + future_defs + past_defs.reverse
-
-        if trigger_defs.any?
-          queries << <<-SQL
-CREATE OR REPLACE FUNCTION #{trigger_name}()
-    RETURNS trigger AS $$
-    BEGIN
-        IF #{trigger_defs.join("\n        ELSIF ")}
-        ELSE
-            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-        END IF;
-        RETURN NULL;
-    END;
-      $$ LANGUAGE plpgsql;
-          SQL
       end
+
+      # order by current period, future periods asc, past periods desc
+      trigger_defs = current_defs + future_defs + past_defs.reverse
+
+      if trigger_defs.any?
+        queries << <<-SQL
+CREATE OR REPLACE FUNCTION #{trigger_name}()
+  RETURNS trigger AS $$
+  BEGIN
+      IF #{trigger_defs.join("\n        ELSIF ")}
+      ELSE
+          RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+      END IF;
+      RETURN NULL;
+  END;
+    $$ LANGUAGE plpgsql;
+        SQL
       end
 
       run_queries(queries) if queries.any?
