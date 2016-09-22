@@ -1,3 +1,7 @@
+## 0.2.0 [unreleased]
+
+- Added new trigger, which is almost twice as fast as previous one in a simple benchmark
+
 ## 0.1.7
 
 - Added `--source-table` option to `fill`
