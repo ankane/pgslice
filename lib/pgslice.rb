@@ -143,12 +143,14 @@ SQL
         updated_trigger = false
       end
       abort "Could not read settings" unless period
-      today = round_date(Date.today, period)
+      today = round_date(DateTime.now.new_offset(0).to_date, period)
+      added_partitions = []
       range.each do |n|
         day = advance_date(today, period, n)
 
         partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
         next if table_exists?(partition_name)
+        added_partitions << partition_name
 
         queries << <<-SQL
 CREATE TABLE #{partition_name}
@@ -169,7 +171,9 @@ CREATE TABLE #{partition_name}
         future_defs = []
         past_defs = []
         name_format = self.name_format(period)
-        existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }.sort
+        existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }
+        existing_tables = (existing_tables + added_partitions).sort
+
         existing_tables.each do |table|
           day = DateTime.strptime(table.split("_").last, name_format)
           partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
@@ -177,18 +181,12 @@ CREATE TABLE #{partition_name}
           sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
             INSERT INTO #{partition_name} VALUES (NEW.*);"
 
-          # utc time
-          now = DateTime.now.new_offset(0).to_date
-
-          if day.to_date < now
+          if day.to_date < today
             past_defs << sql
-            puts "past: #{partition_name}"
-          elsif advance_date(day, period, 1) < now
+          elsif advance_date(day, period, 1) < today
             current_defs << sql
-            puts "current: #{partition_name}"
           else
             future_defs << sql
-            puts "future: #{partition_name}"
           end
         end
 
