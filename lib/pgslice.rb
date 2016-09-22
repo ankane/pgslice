@@ -79,8 +79,7 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
 CREATE FUNCTION #{trigger_name}()
     RETURNS trigger AS $$
     BEGIN
-        EXECUTE 'INSERT INTO #{table}_' || to_char(NEW.#{column}, '#{sql_format}') || ' VALUES ($1.*)' USING NEW;
-        RETURN NULL;
+        RAISE EXCEPTION 'Date out of range. Create partitions first.';
     END;
     $$ LANGUAGE plpgsql;
         SQL
@@ -90,6 +89,10 @@ CREATE TRIGGER #{trigger_name}
     BEFORE INSERT ON #{intermediate_table}
     FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       SQL
+
+        queries << <<-SQL
+COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column: #{column}, period: #{period}';
+SQL
       end
 
       run_queries(queries)
@@ -130,7 +133,15 @@ CREATE TRIGGER #{trigger_name}
 
       queries = []
 
-      period, field = settings_from_table(original_table, table)
+      comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).first
+      updated_trigger = true
+      if comment
+        field, period = comment["comment"].split(", ").map { |v| v.split(":").last.strip } rescue [nil, nil]
+      end
+      unless period
+        period, field = settings_from_table(original_table, table)
+        updated_trigger = false
+      end
       abort "Could not read settings" unless period
       today = round_date(Date.today, period)
       range.each do |n|
@@ -149,6 +160,35 @@ CREATE TABLE #{partition_name}
 
         index_defs.each do |index_def|
           queries << index_def.sub(" ON #{original_table} USING ", " ON #{partition_name} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+        end
+      end
+
+      if updated_trigger
+        # update trigger based on existing partitions
+        trigger_defs = []
+        name_format = self.name_format(period)
+        existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }.sort
+        existing_tables.each do |table|
+          day = DateTime.strptime(table.split("_").last, name_format)
+          partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
+
+          trigger_defs << "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
+            INSERT INTO #{partition_name} VALUES (NEW.*);"
+        end
+
+        if trigger_defs.any?
+          queries << <<-SQL
+  CREATE OR REPLACE FUNCTION #{trigger_name}()
+      RETURNS trigger AS $$
+      BEGIN
+          IF #{trigger_defs.reverse.join("\n        ELSIF ")}
+          ELSE
+              RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+          END IF;
+          RETURN NULL;
+      END;
+        $$ LANGUAGE plpgsql;
+            SQL
         end
       end
 
