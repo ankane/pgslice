@@ -143,6 +143,7 @@ SQL
         queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period}';"
       end
       abort "Could not read settings" unless period
+      # today = utc date
       today = round_date(DateTime.now.new_offset(0).to_date, period)
       added_partitions = []
       range.each do |n|
