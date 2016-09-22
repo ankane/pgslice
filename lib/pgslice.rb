@@ -179,7 +179,7 @@ CREATE TABLE #{partition_name}
         partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
         sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
-          INSERT INTO #{partition_name} VALUES (NEW.*);"
+            INSERT INTO #{partition_name} VALUES (NEW.*);"
 
         if day.to_date < today
           past_defs << sql
