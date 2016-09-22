@@ -165,31 +165,50 @@ CREATE TABLE #{partition_name}
 
       if updated_trigger
         # update trigger based on existing partitions
-        trigger_defs = []
+        current_defs = []
+        future_defs = []
+        past_defs = []
         name_format = self.name_format(period)
         existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }.sort
         existing_tables.each do |table|
           day = DateTime.strptime(table.split("_").last, name_format)
           partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
-          trigger_defs << "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
+          sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
             INSERT INTO #{partition_name} VALUES (NEW.*);"
+
+          # utc time
+          now = DateTime.now.new_offset(0).to_date
+
+          if day.to_date < now
+            past_defs << sql
+            puts "past: #{partition_name}"
+          elsif advance_date(day, period, 1) < now
+            current_defs << sql
+            puts "current: #{partition_name}"
+          else
+            future_defs << sql
+            puts "future: #{partition_name}"
+          end
         end
+
+        # order by current period, future periods asc, past periods desc
+        trigger_defs = current_defs + future_defs + past_defs.reverse
 
         if trigger_defs.any?
           queries << <<-SQL
-  CREATE OR REPLACE FUNCTION #{trigger_name}()
-      RETURNS trigger AS $$
-      BEGIN
-          IF #{trigger_defs.reverse.join("\n        ELSIF ")}
-          ELSE
-              RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-          END IF;
-          RETURN NULL;
-      END;
-        $$ LANGUAGE plpgsql;
-            SQL
-        end
+CREATE OR REPLACE FUNCTION #{trigger_name}()
+    RETURNS trigger AS $$
+    BEGIN
+        IF #{trigger_defs.join("\n        ELSIF ")}
+        ELSE
+            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+        END IF;
+        RETURN NULL;
+    END;
+      $$ LANGUAGE plpgsql;
+          SQL
+      end
       end
 
       run_queries(queries) if queries.any?
