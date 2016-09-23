@@ -1,6 +1,6 @@
-## 0.2.0 [unreleased]
+## 0.2.0
 
-- Added new trigger, which is about 20% faster
+- Switched to new trigger, which is about 20% faster
 
 ## 0.1.7
 

@@ -86,14 +86,15 @@ CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
 CREATE FUNCTION visits_insert_trigger()
     RETURNS trigger AS $$
     BEGIN
-        EXECUTE 'INSERT INTO visits_' || to_char(NEW.created_at, 'YYYYMM') || ' VALUES ($1.*)' USING NEW;
-        RETURN NULL;
+        RAISE EXCEPTION 'Date out of range. Create partitions first.';
     END;
     $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER visits_insert_trigger
     BEFORE INSERT ON visits_intermediate
     FOR EACH ROW EXECUTE PROCEDURE visits_insert_trigger();
+
+COMMENT ON TRIGGER visits_insert_trigger ON visits_intermediate is 'column:created_at,period:month';
 
 COMMIT;
 ```
@@ -128,6 +129,22 @@ CREATE TABLE visits_201610
 ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
 
 CREATE INDEX ON visits_201610 USING btree (user_id);
+
+CREATE OR REPLACE FUNCTION visits_insert_trigger()
+    RETURNS trigger AS $$
+    BEGIN
+        IF (NEW.created_at >= '2016-09-01'::date AND NEW.created_at < '2016-10-01'::date) THEN
+            INSERT INTO visits_201609 VALUES (NEW.*);
+        ELSIF (NEW.created_at >= '2016-10-01'::date AND NEW.created_at < '2016-11-01'::date) THEN
+            INSERT INTO visits_201610 VALUES (NEW.*);
+        ELSIF (NEW.created_at >= '2016-08-01'::date AND NEW.created_at < '2016-09-01'::date) THEN
+            INSERT INTO visits_201608 VALUES (NEW.*);
+        ELSE
+            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+        END IF;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
 
 COMMIT;
 ```
