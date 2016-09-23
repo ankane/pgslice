@@ -1,6 +1,6 @@
 ## 0.2.0 [unreleased]
 
-- Added new trigger, which is almost twice as fast as previous one in a simple benchmark
+- Added new trigger, which is about 20% faster
 
 ## 0.1.7
 
