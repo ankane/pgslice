@@ -70,6 +70,105 @@ This will give you the `pgslice` command.
 
 8. Archive and drop the original table
 
+## Sample Output
+
+pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
+
+```sh
+pgslice prep visits created_at month
+```
+
+```sql
+BEGIN;
+
+CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
+
+CREATE FUNCTION visits_insert_trigger()
+    RETURNS trigger AS $$
+    BEGIN
+        EXECUTE 'INSERT INTO visits_' || to_char(NEW.created_at, 'YYYYMM') || ' VALUES ($1.*)' USING NEW;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER visits_insert_trigger
+    BEFORE INSERT ON visits_intermediate
+    FOR EACH ROW EXECUTE PROCEDURE visits_insert_trigger();
+
+COMMIT;
+```
+
+```sh
+pgslice add_partitions visits --intermediate --past 1 --future 1
+```
+
+```sql
+BEGIN;
+
+CREATE TABLE visits_201608
+    (CHECK (created_at >= '2016-08-01'::date AND created_at < '2016-09-01'::date))
+    INHERITS (visits_intermediate);
+
+ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201608 USING btree (user_id);
+
+CREATE TABLE visits_201609
+    (CHECK (created_at >= '2016-09-01'::date AND created_at < '2016-10-01'::date))
+    INHERITS (visits_intermediate);
+
+ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201609 USING btree (user_id);
+
+CREATE TABLE visits_201610
+    (CHECK (created_at >= '2016-10-01'::date AND created_at < '2016-11-01'::date))
+    INHERITS (visits_intermediate);
+
+ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201610 USING btree (user_id);
+
+COMMIT;
+```
+
+```sh
+pgslice fill visits
+```
+
+```sql
+/* 1 of 3 */
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+
+/* 2 of 3 */
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+
+/* 3 of 3 */
+INSERT INTO visits_intermediate (id, user_id, ip, created_at)
+    SELECT id, user_id, ip, created_at FROM visits
+    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+```
+
+```sh
+pgslice swap visits
+```
+
+```sql
+BEGIN;
+
+ALTER TABLE visits RENAME TO visits_retired;
+
+ALTER TABLE visits_intermediate RENAME TO visits;
+
+ALTER SEQUENCE visits_id_seq OWNED BY visits.id;
+
+COMMIT;
+```
+
 ## Adding Partitions
 
 To add partitions, use:
@@ -114,108 +213,6 @@ To undo swap, use:
 
 ```sh
 pgslice unswap <table>
-```
-
-## Sample Output
-
-pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
-
-```console
-$ pgslice prep visits created_at month
-BEGIN;
-
-CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
-
-CREATE FUNCTION visits_insert_trigger()
-    RETURNS trigger AS $$
-    BEGIN
-        EXECUTE 'INSERT INTO visits_' || to_char(NEW.created_at, 'YYYYMM') || ' VALUES ($1.*)' USING NEW;
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER visits_insert_trigger
-    BEFORE INSERT ON visits_intermediate
-    FOR EACH ROW EXECUTE PROCEDURE visits_insert_trigger();
-
-COMMIT;
-```
-
-```console
-$ pgslice add_partitions visits --intermediate --past 1 --future 1
-BEGIN;
-
-CREATE TABLE visits_201608
-    (CHECK (created_at >= '2016-08-01'::date AND created_at < '2016-09-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201608 USING btree (user_id);
-
-CREATE TABLE visits_201609
-    (CHECK (created_at >= '2016-09-01'::date AND created_at < '2016-10-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201609 USING btree (user_id);
-
-CREATE TABLE visits_201610
-    (CHECK (created_at >= '2016-10-01'::date AND created_at < '2016-11-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201610 USING btree (user_id);
-
-COMMIT;
-```
-
-```console
-$ pgslice fill visits
-/* 1 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
-    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
-
-/* 2 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
-    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
-
-/* 3 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
-    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
-```
-
-```console
-$ pgslice swap visits
-BEGIN;
-
-ALTER TABLE visits RENAME TO visits_retired;
-
-ALTER TABLE visits_intermediate RENAME TO visits;
-
-ALTER SEQUENCE visits_id_seq OWNED BY visits.id;
-
-COMMIT;
-```
-
-```console
-$ pgslice add_partitions visits --future 2
-BEGIN;
-
-CREATE TABLE visits_201611
-    (CHECK (created_at >= '2016-11-01'::date AND created_at < '2016-12-01'::date))
-    INHERITS (visits);
-
-ALTER TABLE visits_201611 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201611 USING btree (user_id);
-
-COMMIT;
 ```
 
 ## App Changes
