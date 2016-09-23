@@ -204,7 +204,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         END IF;
         RETURN NULL;
     END;
-      $$ LANGUAGE plpgsql;
+    $$ LANGUAGE plpgsql;
         SQL
       end
 
