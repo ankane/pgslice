@@ -1,6 +1,6 @@
 # pgslice
 
-Postgres partitioning as easy as pie. Works great for both new and existing tables, with zero downtime and minimal app changes.
+Postgres partitioning as easy as pie. Works great for both new and existing tables, with zero downtime and minimal app changes. Archive older data on a rolling basis to keep your database size under control.
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
@@ -68,7 +68,12 @@ This will give you the `pgslice` command.
   pgslice fill <table> --swapped
   ```
 
-8. Archive and drop the original table
+8. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/9.5/static/app-pgdump.html) and drop it
+
+  ```sql
+  pg_dump -c -Fc -t <table>_retired $PGSLICE_URL > <table>_retired.dump
+  psql -c "DROP <table>_retired" $PGSLICE_URL
+  ```
 
 ## Sample Output
 
@@ -216,6 +221,21 @@ WHERE
     n.nspname = 'public' AND
     c.relname = '<table>_' || to_char(NOW() + INTERVAL '3 days', 'YYYYMMDD')
     -- for months, use to_char(NOW() + INTERVAL '3 months', 'YYYYMM')
+```
+
+## Archiving Partitions
+
+Back up and drop older partitions each day or month.
+
+```sh
+pg_dump -c -Fc -t <table>_201609 $PGSLICE_URL > <table>_201609.dump
+psql -c "DROP <table>_201609" $PGSLICE_URL
+```
+
+If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
+
+```sh
+s3cmd put <table>_201609.dump s3://<s3-bucket>/<table>_201609.dump
 ```
 
 ## Additional Commands
