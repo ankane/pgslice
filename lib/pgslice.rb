@@ -79,7 +79,7 @@ CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
 CREATE FUNCTION #{trigger_name}()
     RETURNS trigger AS $$
     BEGIN
-        RAISE EXCEPTION 'Date out of range. Create partitions first.';
+        RAISE EXCEPTION 'Create partitions first.';
     END;
     $$ LANGUAGE plpgsql;
         SQL
