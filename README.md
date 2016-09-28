@@ -68,7 +68,7 @@ This will give you the `pgslice` command.
   pgslice fill <table> --swapped
   ```
 
-8. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/9.5/static/app-pgdump.html) and drop it
+8. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/current/static/app-pgdump.html) and drop it
 
   ```sql
   pg_dump -c -Fc -t <table>_retired $PGSLICE_URL > <table>_retired.dump
