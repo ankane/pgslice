@@ -1,3 +1,7 @@
+## 0.2.1 [unreleased]
+
+- Added `--where` option to `fill`
+
 ## 0.2.0
 
 - Switched to new trigger, which is about 20% faster

@@ -268,6 +268,9 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         if period
           where << " AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}"
         end
+        if options[:where]
+          where << " AND #{options[:where]}"
+        end
 
         query = <<-SQL
 /* #{i} of #{batch_count} */
@@ -348,6 +351,7 @@ INSERT INTO #{dest_table} (#{fields})
         o.integer "--start"
         o.string "--url"
         o.string "--source-table"
+        o.string "--where"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
