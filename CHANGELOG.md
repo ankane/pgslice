@@ -1,4 +1,4 @@
-## 0.2.1 [unreleased]
+## 0.2.1
 
 - Added `--where` option to `fill`
 - Fixed partition detection with `fill`

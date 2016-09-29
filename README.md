@@ -91,7 +91,7 @@ CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
 CREATE FUNCTION visits_insert_trigger()
     RETURNS trigger AS $$
     BEGIN
-        RAISE EXCEPTION 'Date out of range. Create partitions first.';
+        RAISE EXCEPTION 'Create partitions first.';
     END;
     $$ LANGUAGE plpgsql;
 
@@ -160,18 +160,18 @@ pgslice fill visits
 
 ```sql
 /* 1 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
+INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM visits
     WHERE id > 0 AND id <= 10000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 
 /* 2 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
+INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM visits
     WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 
 /* 3 of 3 */
-INSERT INTO visits_intermediate (id, user_id, ip, created_at)
-    SELECT id, user_id, ip, created_at FROM visits
+INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM visits
     WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
 ```
 
@@ -288,7 +288,7 @@ You can also use pgslice to reduce the size of a table without partitioning by c
 
 ```sh
 pgslice prep <table> --no-partition
-pgslice fill <table> --start 1000 # starting primary key
+pgslice fill <table> --where "id > 1000" # use any conditions
 pgslice swap <table>
 ```
 
