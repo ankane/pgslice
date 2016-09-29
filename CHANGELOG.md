@@ -1,6 +1,8 @@
 ## 0.2.1 [unreleased]
 
 - Added `--where` option to `fill`
+- Fixed partition detection with `fill`
+- Fixed error for columns named `user` with `fill`
 
 ## 0.2.0
 

@@ -133,16 +133,13 @@ SQL
 
       queries = []
 
-      comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).first
-      if comment
-        field, period = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil]
-      end
+      period, field, needs_comment = settings_from_trigger(original_table, table)
+      abort "Could not read settings" unless period
 
-      unless period
-        period, field = settings_from_table(original_table, table)
+      if needs_comment
         queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period}';"
       end
-      abort "Could not read settings" unless period
+
       # today = utc date
       today = round_date(DateTime.now.new_offset(0).to_date, period)
       added_partitions = []
@@ -229,7 +226,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
-      period, field = settings_from_table(table, dest_table)
+      period, field, needs_comment = settings_from_trigger(table, dest_table)
 
       if period
         name_format = self.name_format(period)
@@ -258,7 +255,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       end
 
       starting_id = max_dest_id
-      fields = columns(source_table).join(", ")
+      fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
 
       i = 1
@@ -531,16 +528,27 @@ INSERT INTO #{dest_table} (#{fields})
       end
     end
 
-    def settings_from_table(original_table, table)
+    def settings_from_trigger(original_table, table)
       trigger_name = self.trigger_name(original_table)
-      function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]
-      return [nil, nil] unless function_def
-      function_def = function_def["pg_get_functiondef"]
-      sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
-      return [nil, nil] unless sql_format
-      period = sql_format[0]
-      field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
-      [period, field]
+
+      needs_comment = false
+      comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table])[0]
+      if comment
+        field, period = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil]
+      end
+
+      unless period
+        needs_comment = true
+        function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]
+        return [nil, nil] unless function_def
+        function_def = function_def["pg_get_functiondef"]
+        sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
+        return [nil, nil] unless sql_format
+        period = sql_format[0]
+        field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
+      end
+
+      [period, field, needs_comment]
     end
   end
 end
