@@ -1,3 +1,7 @@
+## 0.2.2 [unreleased]
+
+- Set `lock_timeout` on `swap` to prevent bad things from happening
+
 ## 0.2.1
 
 - Added `--where` option to `fill`

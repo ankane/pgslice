@@ -308,6 +308,8 @@ INSERT INTO #{dest_table} (#{fields})
         queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
+      queries.unshift("SET LOCAL lock_timeout = '#{options[:lock_timeout]}';") if server_version_num >= 90300
+
       run_queries(queries)
     end
 
@@ -349,6 +351,7 @@ INSERT INTO #{dest_table} (#{fields})
         o.string "--url"
         o.string "--source-table"
         o.string "--where"
+        o.string "--lock-timeout", default: "5s"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
@@ -411,6 +414,10 @@ INSERT INTO #{dest_table} (#{fields})
         end
         log_sql "COMMIT;"
       end
+    end
+
+    def server_version_num
+      execute("SHOW server_version_num")[0]["server_version_num"].to_i
     end
 
     def existing_tables(like:)
