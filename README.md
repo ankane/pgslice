@@ -182,6 +182,8 @@ pgslice swap visits
 ```sql
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+
 ALTER TABLE visits RENAME TO visits_retired;
 
 ALTER TABLE visits_intermediate RENAME TO visits;
