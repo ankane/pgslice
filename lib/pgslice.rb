@@ -410,7 +410,13 @@ INSERT INTO #{dest_table} (#{fields})
         queries.each do |query|
           log_sql query
           log_sql
-          execute(query) unless options[:dry_run]
+          unless options[:dry_run]
+            begin
+              execute(query)
+            rescue PG::ServerError => e
+              abort("#{e.class.name}: #{e.message}")
+            end
+          end
         end
         log_sql "COMMIT;"
       end

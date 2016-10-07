@@ -1,6 +1,7 @@
 ## 0.2.2 [unreleased]
 
 - Set `lock_timeout` on `swap` to prevent bad things from happening
+- Friendlier error messages
 
 ## 0.2.1
 
