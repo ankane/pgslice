@@ -249,7 +249,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         if options[:start]
           max_dest_id = options[:start]
         else
-          min_source_id = min_id(source_table, primary_key, field, starting_time)
+          min_source_id = min_id(source_table, primary_key, field, starting_time, options[:where])
           max_dest_id = min_source_id - 1 if min_source_id
         end
       end
@@ -453,9 +453,12 @@ INSERT INTO #{dest_table} (#{fields})
       execute(query)[0]["max"].to_i
     end
 
-    def min_id(table, primary_key, column, starting_time)
+    def min_id(table, primary_key, column, starting_time, where)
       query = "SELECT MIN(#{primary_key}) FROM #{table}"
-      query << " WHERE #{column} >= #{sql_date(starting_time)}" if starting_time
+      conditions = []
+      conditions << "#{column} >= #{sql_date(starting_time)}" if starting_time
+      conditions << where if where
+      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
       (execute(query)[0]["min"] || 1).to_i
     end
 
