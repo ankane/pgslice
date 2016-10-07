@@ -245,6 +245,12 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
           max_id(dest_table, primary_key)
         end
 
+      if options[:down_to]
+        max_dest_id = options[:down_to] - 1
+        max_source_id = min_id(dest_table, primary_key, field, nil, options[:where])
+        max_source_id = max_source_id - 1 if max_source_id
+      end
+
       if max_dest_id == 0 && !options[:swapped]
         if options[:start]
           max_dest_id = options[:start]
@@ -254,14 +260,29 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         end
       end
 
-      starting_id = max_dest_id
       fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
 
-      i = 1
-      batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
-      while starting_id < max_source_id
-        where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
+      batches = []
+      if options[:down_to]
+        starting_id = max_source_id
+        while starting_id > max_dest_id
+          batches << {starting_id: [starting_id - batch_size, max_dest_id].max, ending_id: starting_id}
+          starting_id -= batch_size
+        end
+      else
+        starting_id = max_dest_id
+        while starting_id < max_source_id
+          batches << {starting_id: starting_id, ending_id: starting_id + batch_size}
+          starting_id += batch_size
+        end
+      end
+
+      batches.each_with_index do |batch, i|
+        starting_id = batch[:starting_id]
+        ending_id = batch[:ending_id]
+
+        where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{ending_id}"
         if period
           where << " AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}"
         end
@@ -270,7 +291,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         end
 
         query = <<-SQL
-/* #{i} of #{batch_count} */
+/* #{i + 1} of #{batches.size} */
 INSERT INTO #{dest_table} (#{fields})
     SELECT #{fields} FROM #{source_table}
     WHERE #{where}
@@ -280,10 +301,7 @@ INSERT INTO #{dest_table} (#{fields})
         log_sql
         execute(query)
 
-        starting_id += batch_size
-        i += 1
-
-        if options[:sleep] && starting_id <= max_source_id
+        if options[:sleep] && i < batches.size - 1
           sleep(options[:sleep])
         end
       end
@@ -349,6 +367,7 @@ INSERT INTO #{dest_table} (#{fields})
         o.string "--url"
         o.string "--source-table"
         o.string "--where"
+        o.integer "--down-to"
         o.on "-v", "--version", "print the version" do
           log PgSlice::VERSION
           @exit = true
