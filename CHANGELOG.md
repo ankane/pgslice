@@ -1,4 +1,4 @@
-## 0.2.3 [unreleased]
+## 0.2.3
 
 - Added `--dest-table` option to `fill`
 - Fixed errors with `fill` when no partitions created
