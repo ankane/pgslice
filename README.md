@@ -309,7 +309,7 @@ gem install specific_install
 gem specific_install ankane/pgslice
 ```
 
-### Docker
+## Docker
 
 ```sh
 docker build -t pgslice .
