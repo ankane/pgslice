@@ -14,15 +14,6 @@ gem install pgslice
 
 This will give you the `pgslice` command.
 
-### With Docker
-
-```sh
-docker build -t pgslice .
-alias pgslice='docker run --rm -e PGSLICE_URL pgslice'
-```
-
-This will give you the `pgslice` command.
-
 ## Steps
 
 1. Ensure the table you want to partition has been created. We’ll refer to this as `<table>`.
@@ -317,6 +308,15 @@ To use master, run:
 gem install specific_install
 gem specific_install ankane/pgslice
 ```
+
+### Docker
+
+```sh
+docker build -t pgslice .
+alias pgslice="docker run --rm -e PGSLICE_URL pgslice"
+```
+
+This will give you the `pgslice` command.
 
 ## Reference
 
