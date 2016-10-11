@@ -1,3 +1,8 @@
+## 0.2.3 [unreleased]
+
+- Added `--dest-table` option to `fill`
+- Fixed errors with `fill` when no partitions created
+
 ## 0.2.2
 
 - Set `lock_timeout` on `swap` to prevent bad things from happening

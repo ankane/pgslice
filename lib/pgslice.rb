@@ -214,13 +214,14 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       abort "Usage: pgslice fill <table>" if arguments.length != 1
 
       source_table = options[:source_table]
+      dest_table = options[:dest_table]
 
       if options[:swapped]
         source_table ||= retired_name(table)
-        dest_table = table
+        dest_table ||= table
       else
         source_table ||= table
-        dest_table = intermediate_name(table)
+        dest_table ||= intermediate_name(table)
       end
 
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
@@ -232,17 +233,19 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         name_format = self.name_format(period)
 
         existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
-        starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
-        ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
+        if existing_tables.any?
+          starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
+          ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
+        end
       end
 
       primary_key = self.primary_key(table)
       max_source_id = max_id(source_table, primary_key)
       max_dest_id =
         if options[:swapped]
-          max_id(dest_table, primary_key, below: max_source_id)
+          max_id(dest_table, primary_key, where: options[:where], below: max_source_id)
         else
-          max_id(dest_table, primary_key)
+          max_id(dest_table, primary_key, where: options[:where])
         end
 
       if max_dest_id == 0 && !options[:swapped]
@@ -262,7 +265,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
       while starting_id < max_source_id
         where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
-        if period
+        if starting_time
           where << " AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}"
         end
         if options[:where]
@@ -350,6 +353,7 @@ INSERT INTO #{dest_table} (#{fields})
         o.integer "--start"
         o.string "--url"
         o.string "--source-table"
+        o.string "--dest-table"
         o.string "--where"
         o.string "--lock-timeout", default: "5s"
         o.on "-v", "--version", "print the version" do
@@ -460,9 +464,12 @@ INSERT INTO #{dest_table} (#{fields})
       row && row["attname"]
     end
 
-    def max_id(table, primary_key, below: nil)
+    def max_id(table, primary_key, below: nil, where: nil)
       query = "SELECT MAX(#{primary_key}) FROM #{table}"
-      query << " WHERE #{primary_key} <= #{below}" if below
+      conditions = []
+      conditions << "#{primary_key} <= #{below}" if below
+      conditions << where if where
+      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
       execute(query)[0]["max"].to_i
     end
 
