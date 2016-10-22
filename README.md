@@ -254,9 +254,16 @@ To undo swap, use:
 pgslice unswap <table>
 ```
 
-## App Changes
+## App Considerations
 
 This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
+
+### Writes
+
+If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
+
+1. Insert directly into the partition
+2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
 
 ### Reads
 
@@ -276,13 +283,6 @@ For this to be effective, ensure `constraint_exclusion` is set to `partition` (d
 ```sql
 SHOW constraint_exclusion;
 ```
-
-### Writes
-
-If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record back. If you need this, you can either:
-
-1. Insert directly into the partition
-2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
 
 ## One Off Tasks
 
