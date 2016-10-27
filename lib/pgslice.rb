@@ -1,6 +1,7 @@
 require "pgslice/version"
 require "slop"
 require "pg"
+require "cgi"
 
 module PgSlice
   class Error < StandardError; end
@@ -400,13 +401,14 @@ INSERT INTO #{dest_table} (#{fields})
           connect_timeout: 1
         }.reject { |_, value| value.to_s.empty? }
         config.map { |key, value| config[key] = uri_parser.unescape(value) if value.is_a?(String) }
+        @schema = CGI.parse(uri.query.to_s)["schema"][0] || "public"
         PG::Connection.new(config)
       end
     end
 
     def schema
-      # TODO read from connection config
-      "public"
+      connection # ensure called first
+      @schema
     end
 
     def execute(query, params = [])
