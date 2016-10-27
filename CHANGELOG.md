@@ -1,3 +1,7 @@
+## 0.3.0 [unreleased]
+
+- Better query performance for `timestamptz` columns
+
 ## 0.2.3
 
 - Added `--dest-table` option to `fill`
