@@ -404,6 +404,11 @@ INSERT INTO #{dest_table} (#{fields})
       end
     end
 
+    def schema
+      # TODO read from connection config
+      "public"
+    end
+
     def execute(query, params = [])
       connection.exec_params(query, params).to_a
     end
@@ -434,7 +439,7 @@ INSERT INTO #{dest_table} (#{fields})
 
     def existing_tables(like:)
       query = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2"
-      execute(query, ["public", like]).map { |r| r["tablename"] }.sort
+      execute(query, [schema, like]).map { |r| r["tablename"] }.sort
     end
 
     def table_exists?(table)
@@ -442,7 +447,7 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def columns(table)
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1", [table]).map{ |r| r["column_name"] }
+      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2", [schema, table]).map{ |r| r["column_name"] }
     end
 
     # http://stackoverflow.com/a/20537829
@@ -462,7 +467,7 @@ INSERT INTO #{dest_table} (#{fields})
           pg_attribute.attnum = any(pg_index.indkey) AND
           indisprimary
       SQL
-      row = execute(query, ["public", table])[0]
+      row = execute(query, [schema, table])[0]
       row && row["attname"]
     end
 
@@ -501,10 +506,10 @@ INSERT INTO #{dest_table} (#{fields})
           JOIN pg_attribute a ON (d.refobjid, d.refobjsubid) = (a.attrelid, a.attnum)
           JOIN pg_namespace n ON n.oid = s.relnamespace
         WHERE s.relkind = 'S'
-          AND n.nspname = 'public'
-          AND t.relname = $1
+          AND n.nspname = $1
+          AND t.relname = $2
       SQL
-      execute(query, [table])
+      execute(query, [schema, table])
     end
 
     # helpers
@@ -522,7 +527,7 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def column_cast(table, column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, table, column])[0]["data_type"]
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
     end
 
