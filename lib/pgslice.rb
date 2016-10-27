@@ -134,6 +134,7 @@ SQL
       queries = []
 
       period, field, needs_comment = settings_from_trigger(original_table, table)
+      cast = column_cast(table, field)
       abort "Could not read settings" unless period
 
       if needs_comment
@@ -152,7 +153,7 @@ SQL
 
         queries << <<-SQL
 CREATE TABLE #{partition_name}
-    (CHECK (#{field} >= #{sql_date(day)} AND #{field} < #{sql_date(advance_date(day, period, 1))}))
+    (CHECK (#{field} >= #{sql_date(day, cast)} AND #{field} < #{sql_date(advance_date(day, period, 1), cast)}))
     INHERITS (#{table});
         SQL
 
@@ -175,7 +176,7 @@ CREATE TABLE #{partition_name}
         day = DateTime.strptime(table.split("_").last, name_format)
         partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
-        sql = "(NEW.#{field} >= #{sql_date(day)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1))}) THEN
+        sql = "(NEW.#{field} >= #{sql_date(day, cast)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
             INSERT INTO #{partition_name} VALUES (NEW.*);"
 
         if day.to_date < today
@@ -260,13 +261,14 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       starting_id = max_dest_id
       fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
+      cast = column_cast(table, field)
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
       while starting_id < max_source_id
         where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
         if starting_time
-          where << " AND #{field} >= #{sql_date(starting_time)} AND #{field} < #{sql_date(ending_time)}"
+          where << " AND #{field} >= #{sql_date(starting_time, cast)} AND #{field} < #{sql_date(ending_time, cast)}"
         end
         if options[:where]
           where << " AND #{options[:where]}"
@@ -474,9 +476,10 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def min_id(table, primary_key, column, starting_time, where)
+      cast = column_cast(table, column)
       query = "SELECT MIN(#{primary_key}) FROM #{table}"
       conditions = []
-      conditions << "#{column} >= #{sql_date(starting_time)}" if starting_time
+      conditions << "#{column} >= #{sql_date(starting_time, cast)}" if starting_time
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
       (execute(query)[0]["min"] || 1).to_i
@@ -518,8 +521,13 @@ INSERT INTO #{dest_table} (#{fields})
       "#{table}_retired"
     end
 
-    def sql_date(time)
-      "'#{time.strftime("%Y-%m-%d")}'::date"
+    def column_cast(table, column)
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
+      data_type == "timestamp with time zone" ? "timestamptz" : "date"
+    end
+
+    def sql_date(time, cast)
+      "'#{time.strftime("%Y-%m-%d")}'::#{cast}"
     end
 
     def name_format(period)
