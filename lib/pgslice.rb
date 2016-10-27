@@ -530,7 +530,10 @@ INSERT INTO #{dest_table} (#{fields})
 
     def column_cast(table, column)
       data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, table, column])[0]["data_type"]
-      data_type == "timestamp with time zone" ? "timestamptz" : "date"
+
+      # data_type == "timestamp with time zone" ? "timestamptz" : "date"
+      # use date until we can figure out backwards compatibility
+      "date"
     end
 
     def sql_date(time, cast)
