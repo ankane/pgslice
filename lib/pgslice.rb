@@ -404,6 +404,8 @@ INSERT INTO #{dest_table} (#{fields})
         @schema = CGI.parse(uri.query.to_s)["schema"][0] || "public"
         PG::Connection.new(config)
       end
+    rescue PG::ConnectionBad => e
+      abort e.message
     end
 
     def schema
