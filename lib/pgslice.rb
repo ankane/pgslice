@@ -51,6 +51,7 @@ module PgSlice
 
     def prep
       table, column, period = arguments
+      cast = column_cast(table, column)
       intermediate_table = "#{table}_intermediate"
       trigger_name = self.trigger_name(table)
 
@@ -91,7 +92,7 @@ CREATE TRIGGER #{trigger_name}
       SQL
 
         queries << <<-SQL
-COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column:#{column},period:#{period}';
+COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column:#{column},period:#{period},cast:#{cast}';
 SQL
       end
 
@@ -133,12 +134,11 @@ SQL
 
       queries = []
 
-      period, field, needs_comment = settings_from_trigger(original_table, table)
-      cast = column_cast(table, field)
+      period, field, cast, needs_comment = settings_from_trigger(original_table, table)
       abort "Could not read settings" unless period
 
       if needs_comment
-        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period}';"
+        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period},cast:#{cast}';"
       end
 
       # today = utc date
@@ -228,7 +228,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
-      period, field, needs_comment = settings_from_trigger(table, dest_table)
+      period, field, cast, needs_comment = settings_from_trigger(table, dest_table)
 
       if period
         name_format = self.name_format(period)
@@ -253,7 +253,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         if options[:start]
           max_dest_id = options[:start]
         else
-          min_source_id = min_id(source_table, primary_key, field, starting_time, options[:where])
+          min_source_id = min_id(source_table, primary_key, field, cast, starting_time, options[:where])
           max_dest_id = min_source_id - 1 if min_source_id
         end
       end
@@ -261,7 +261,6 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       starting_id = max_dest_id
       fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
-      cast = column_cast(table, field)
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
@@ -475,8 +474,7 @@ INSERT INTO #{dest_table} (#{fields})
       execute(query)[0]["max"].to_i
     end
 
-    def min_id(table, primary_key, column, starting_time, where)
-      cast = column_cast(table, column)
+    def min_id(table, primary_key, column, cast, starting_time, where)
       query = "SELECT MIN(#{primary_key}) FROM #{table}"
       conditions = []
       conditions << "#{column} >= #{sql_date(starting_time, cast)}" if starting_time
@@ -522,12 +520,17 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def column_cast(table, column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
     end
 
     def sql_date(time, cast)
-      "'#{time.strftime("%Y-%m-%d")}'::#{cast}"
+      if cast == "timestamptz"
+        fmt = "%Y-%m-%d %H:%M:%S UTC"
+      else
+        fmt = "%Y-%m-%d"
+      end
+      "'#{time.strftime(fmt)}'::#{cast}"
     end
 
     def name_format(period)
@@ -565,7 +568,7 @@ INSERT INTO #{dest_table} (#{fields})
       needs_comment = false
       comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table])[0]
       if comment
-        field, period = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil]
+        field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
       end
 
       unless period
@@ -577,9 +580,17 @@ INSERT INTO #{dest_table} (#{fields})
         return [nil, nil] unless sql_format
         period = sql_format[0]
         field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
+        cast = column_cast(table, field)
       end
 
-      [period, field, needs_comment]
+      # backwards compatibility with 0.2.3 and earlier (pre-timestamptz support)
+      unless cast
+        cast = "date"
+        # update comment to explicitly define cast
+        needs_comment = true
+      end
+
+      [period, field, cast, needs_comment]
     end
   end
 end
