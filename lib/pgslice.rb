@@ -262,7 +262,6 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       starting_id = max_dest_id
       fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
-      cast = column_cast(table, field)
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
@@ -485,7 +484,6 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def min_id(table, primary_key, column, cast, starting_time, where)
-      cast = column_cast(table, column)
       query = "SELECT MIN(#{primary_key}) FROM #{table}"
       conditions = []
       conditions << "#{column} >= #{sql_date(starting_time, cast)}" if starting_time
