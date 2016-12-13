@@ -1,4 +1,4 @@
-## 0.3.0 [unreleased]
+## 0.3.0
 
 - Better query performance for `timestamptz` columns
 - Added support for schemas other than `public`
