@@ -1,4 +1,4 @@
-## 0.3.1 [unreleased]
+## 0.3.1
 
 - Fixed exception with `--no-partition` option
 - Use proper cast type in `fill` method for legacy `timestamptz` columns
