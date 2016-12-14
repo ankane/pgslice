@@ -52,7 +52,6 @@ module PgSlice
 
     def prep
       table, column, period = arguments
-      cast = column_cast(table, column)
       intermediate_table = "#{table}_intermediate"
       trigger_name = self.trigger_name(table)
 
@@ -92,6 +91,7 @@ CREATE TRIGGER #{trigger_name}
     FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       SQL
 
+        cast = column_cast(table, column)
         queries << <<-SQL
 COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column:#{column},period:#{period},cast:#{cast}';
 SQL
