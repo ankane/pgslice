@@ -247,7 +247,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       max_dest_id =
         if options[:start]
           options[:start]
-        if options[:swapped]
+        elsif options[:swapped]
           max_id(dest_table, primary_key, where: options[:where], below: max_source_id)
         else
           max_id(dest_table, primary_key, where: options[:where])
