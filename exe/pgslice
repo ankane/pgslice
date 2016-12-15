@@ -6,5 +6,5 @@ begin
 rescue PgSlice::Error => e
   abort e.message
 rescue Interrupt => e
-  # do nothing
+  abort
 end
