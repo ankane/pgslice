@@ -1,3 +1,7 @@
+## 0.3.2 [unreleased]
+
+- Exit with error code on interrupt
+
 ## 0.3.1
 
 - Fixed exception with `--no-partition` option
