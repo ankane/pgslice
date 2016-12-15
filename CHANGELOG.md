@@ -1,6 +1,7 @@
-## 0.3.2 [unreleased]
+## 0.3.2
 
 - Exit with error code on interrupt
+- Fixed `--start` option with `--swapped`
 
 ## 0.3.1
 
