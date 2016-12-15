@@ -243,7 +243,10 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
 
       primary_key = self.primary_key(table)
       max_source_id = max_id(source_table, primary_key)
+
       max_dest_id =
+        if options[:start]
+          options[:start]
         if options[:swapped]
           max_id(dest_table, primary_key, where: options[:where], below: max_source_id)
         else
@@ -251,12 +254,8 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
         end
 
       if max_dest_id == 0 && !options[:swapped]
-        if options[:start]
-          max_dest_id = options[:start]
-        else
-          min_source_id = min_id(source_table, primary_key, field, cast, starting_time, options[:where])
-          max_dest_id = min_source_id - 1 if min_source_id
-        end
+        min_source_id = min_id(source_table, primary_key, field, cast, starting_time, options[:where])
+        max_dest_id = min_source_id - 1 if min_source_id
       end
 
       starting_id = max_dest_id
