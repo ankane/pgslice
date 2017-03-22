@@ -170,7 +170,7 @@ CREATE TABLE #{partition_name}
       future_defs = []
       past_defs = []
       name_format = self.name_format(period)
-      existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /#{Regexp.escape("#{original_table}_")}(\d{4,6})/.match(t) }
+      existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /\A#{Regexp.escape("#{original_table}_")}\d{6,8}\z/.match(t) }
       existing_tables = (existing_tables + added_partitions).uniq.sort
 
       existing_tables.each do |table|
@@ -234,7 +234,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       if period
         name_format = self.name_format(period)
 
-        existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /#{Regexp.escape("#{table}_")}(\d{4,6})/.match(t) }.sort
+        existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }.sort
         if existing_tables.any?
           starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
           ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)

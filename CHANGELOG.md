@@ -1,3 +1,7 @@
+## 0.3.3 [unreleased]
+
+- Fixed error when creating partitions
+
 ## 0.3.2
 
 - Exit with error code on interrupt
