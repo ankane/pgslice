@@ -263,7 +263,7 @@ This set up allows you to read and write with the original table name with no kn
 If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
 
 1. Insert directly into the partition
-2. Get the value after the insert with `SELECT CURRVAL('sequence_name')`
+2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
 
 ### Reads
 
