@@ -1,4 +1,4 @@
-## 0.3.3 [unreleased]
+## 0.3.3
 
 - Fixed error when creating partitions
 
