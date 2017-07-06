@@ -79,7 +79,7 @@ CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCL
       unless options[:no_partition]
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
-CREATE FUNCTION #{trigger_name}()
+CREATE FUNCTION #{quote_ident(trigger_name)}()
     RETURNS trigger AS $$
     BEGIN
         RAISE EXCEPTION 'Create partitions first.';
@@ -88,14 +88,14 @@ CREATE FUNCTION #{trigger_name}()
         SQL
 
         queries << <<-SQL
-CREATE TRIGGER #{trigger_name}
+CREATE TRIGGER #{quote_ident(trigger_name)}
     BEFORE INSERT ON #{quote_ident(intermediate_table)}
-    FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
+    FOR EACH ROW EXECUTE PROCEDURE #{quote_ident(trigger_name)}();
       SQL
 
         cast = column_cast(table, column)
         queries << <<-SQL
-COMMENT ON TRIGGER #{trigger_name} ON #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
 SQL
       end
 
@@ -132,7 +132,7 @@ SQL
       # ensure table has trigger
       abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
 
-      index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
+      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index INNER JOIN pg_stat_user_indexes USING (indexrelid) WHERE relname = $1 AND schemaname = $2 AND indisprimary = 'f'", [original_table, schema]).map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
 
       queries = []
@@ -141,7 +141,7 @@ SQL
       abort "Could not read settings" unless period
 
       if needs_comment
-        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{quote_ident(table)} is 'column:#{field},period:#{period},cast:#{cast}';"
+        queries << "COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(table)} is 'column:#{field},period:#{period},cast:#{cast}';"
       end
 
       # today = utc date
@@ -179,7 +179,7 @@ CREATE TABLE #{quote_ident(partition_name)}
         day = DateTime.strptime(table.split("_").last, name_format)
         partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
-        sql = "(NEW.#{field} >= #{sql_date(day, cast)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
+        sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
             INSERT INTO #{quote_ident(partition_name)} VALUES (NEW.*);"
 
         if day.to_date < today
@@ -196,7 +196,7 @@ CREATE TABLE #{quote_ident(partition_name)}
 
       if trigger_defs.any?
         queries << <<-SQL
-CREATE OR REPLACE FUNCTION #{trigger_name}()
+CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     RETURNS trigger AS $$
     BEGIN
         IF #{trigger_defs.join("\n        ELSIF ")}
@@ -486,7 +486,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
         FROM
           pg_index, pg_class, pg_attribute, pg_namespace
         WHERE
-          pg_class.oid = $2::regclass AND
+          relname = $2 AND
           indrelid = pg_class.oid AND
           nspname = $1 AND
           pg_class.relnamespace = pg_namespace.oid AND
@@ -517,7 +517,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def has_trigger?(trigger_name, table)
-      execute("SELECT 1 FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table]).any?
+      !fetch_trigger(trigger_name, table).nil?
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
@@ -599,11 +599,15 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       PG::Connection.quote_ident(value)
     end
 
+    def fetch_trigger(trigger_name, table)
+      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND EXISTS (SELECT 1 FROM pg_stat_user_tables WHERE relid = tgrelid AND relname = $2 AND schemaname = $3)", [trigger_name, table, schema])[0]
+    end
+
     def settings_from_trigger(original_table, table)
       trigger_name = self.trigger_name(original_table)
 
       needs_comment = false
-      comment = execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, table])[0]
+      comment = fetch_trigger(trigger_name, table)
       if comment
         field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
       end

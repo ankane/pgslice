@@ -3,15 +3,15 @@ require_relative "test_helper"
 class PgSliceTest < Minitest::Test
   def test_basic
     [
-      "prep posts created_at day",
-      "add_partitions posts --intermediate --past 1 --future 1",
-      "fill posts",
-      "analyze posts",
-      "swap posts",
-      "fill posts --swapped",
-      "add_partitions posts --future 3",
-      "unswap posts",
-      "unprep posts"
+      "prep Posts createdAt day",
+      "add_partitions Posts --intermediate --past 1 --future 1",
+      "fill Posts",
+      "analyze Posts",
+      "swap Posts",
+      "fill Posts --swapped",
+      "add_partitions Posts --future 3",
+      "unswap Posts",
+      "unprep Posts"
     ].each do |command|
       puts "pgslice #{command}"
       puts
