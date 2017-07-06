@@ -2,6 +2,7 @@
 
 - Added `analyze` method
 - Fixed `fill` with `--dry-run` option
+- Better error message for tables without primary key
 
 ## 0.3.3
 

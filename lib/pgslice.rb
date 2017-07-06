@@ -134,7 +134,6 @@ SQL
 
       index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
-      abort "No primary key" unless primary_key
 
       queries = []
 
@@ -245,6 +244,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       end
 
       primary_key = self.primary_key(table)
+      abort "No primary key" unless primary_key
       max_source_id = max_id(source_table, primary_key)
 
       max_dest_id =
