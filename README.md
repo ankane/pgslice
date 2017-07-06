@@ -182,6 +182,20 @@ INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
 ```
 
 ```sh
+pgslice analyze visits
+```
+
+```sql
+ANALYZE VERBOSE visits_201608;
+
+ANALYZE VERBOSE visits_201609;
+
+ANALYZE VERBOSE visits_201610;
+
+ANALYZE VERBOSE visits_intermediate;
+```
+
+```sh
 pgslice swap visits
 ```
 
