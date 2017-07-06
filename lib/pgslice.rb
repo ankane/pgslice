@@ -73,7 +73,7 @@ module PgSlice
       queries = []
 
       queries << <<-SQL
-CREATE TABLE #{intermediate_table} (LIKE #{table} INCLUDING ALL);
+CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING ALL);
       SQL
 
       unless options[:no_partition]
@@ -89,13 +89,13 @@ CREATE FUNCTION #{trigger_name}()
 
         queries << <<-SQL
 CREATE TRIGGER #{trigger_name}
-    BEFORE INSERT ON #{intermediate_table}
+    BEFORE INSERT ON #{quote_ident(intermediate_table)}
     FOR EACH ROW EXECUTE PROCEDURE #{trigger_name}();
       SQL
 
         cast = column_cast(table, column)
         queries << <<-SQL
-COMMENT ON TRIGGER #{trigger_name} ON #{intermediate_table} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TRIGGER #{trigger_name} ON #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
 SQL
       end
 
@@ -111,7 +111,7 @@ SQL
       abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
 
       queries = [
-        "DROP TABLE #{intermediate_table} CASCADE;",
+        "DROP TABLE #{quote_ident(intermediate_table)} CASCADE;",
         "DROP FUNCTION IF EXISTS #{trigger_name}();"
       ]
       run_queries(queries)
@@ -141,7 +141,7 @@ SQL
       abort "Could not read settings" unless period
 
       if needs_comment
-        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{table} is 'column:#{field},period:#{period},cast:#{cast}';"
+        queries << "COMMENT ON TRIGGER #{trigger_name} ON #{quote_ident(table)} is 'column:#{field},period:#{period},cast:#{cast}';"
       end
 
       # today = utc date
@@ -155,12 +155,12 @@ SQL
         added_partitions << partition_name
 
         queries << <<-SQL
-CREATE TABLE #{partition_name}
-    (CHECK (#{field} >= #{sql_date(day, cast)} AND #{field} < #{sql_date(advance_date(day, period, 1), cast)}))
-    INHERITS (#{table});
+CREATE TABLE #{quote_ident(partition_name)}
+    (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
+    INHERITS (#{quote_ident(table)});
         SQL
 
-        queries << "ALTER TABLE #{partition_name} ADD PRIMARY KEY (#{primary_key});" if primary_key
+        queries << "ALTER TABLE #{quote_ident(partition_name)} ADD PRIMARY KEY (#{quote_ident(primary_key)});" if primary_key
 
         index_defs.each do |index_def|
           queries << index_def.sub(" ON #{original_table} USING ", " ON #{partition_name} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
@@ -180,7 +180,7 @@ CREATE TABLE #{partition_name}
         partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
         sql = "(NEW.#{field} >= #{sql_date(day, cast)} AND NEW.#{field} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-            INSERT INTO #{partition_name} VALUES (NEW.*);"
+            INSERT INTO #{quote_ident(partition_name)} VALUES (NEW.*);"
 
         if day.to_date < today
           past_defs << sql
@@ -262,7 +262,7 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       end
 
       starting_id = max_dest_id
-      fields = columns(source_table).map { |c| PG::Connection.quote_ident(c) }.join(", ")
+      fields = columns(source_table).map { |c| quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
 
       i = 1
@@ -273,9 +273,9 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
       end
 
       while starting_id < max_source_id
-        where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
+        where = "#{quote_ident(primary_key)} > #{starting_id} AND #{quote_ident(primary_key)} <= #{starting_id + batch_size}"
         if starting_time
-          where << " AND #{field} >= #{sql_date(starting_time, cast)} AND #{field} < #{sql_date(ending_time, cast)}"
+          where << " AND #{quote_ident(field)} >= #{sql_date(starting_time, cast)} AND #{quote_ident(field)} < #{sql_date(ending_time, cast)}"
         end
         if options[:where]
           where << " AND #{options[:where]}"
@@ -283,8 +283,8 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
 
         query = <<-SQL
 /* #{i} of #{batch_count} */
-INSERT INTO #{dest_table} (#{fields})
-    SELECT #{fields} FROM #{source_table}
+INSERT INTO #{quote_ident(dest_table)} (#{fields})
+    SELECT #{fields} FROM #{quote_ident(source_table)}
     WHERE #{where}
         SQL
 
@@ -310,12 +310,12 @@ INSERT INTO #{dest_table} (#{fields})
       abort "Table already exists: #{retired_table}" if table_exists?(retired_table)
 
       queries = [
-        "ALTER TABLE #{table} RENAME TO #{retired_table};",
-        "ALTER TABLE #{intermediate_table} RENAME TO #{table};"
+        "ALTER TABLE #{quote_ident(table)} RENAME TO #{quote_ident(retired_table)};",
+        "ALTER TABLE #{quote_ident(intermediate_table)} RENAME TO #{quote_ident(table)};"
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
       queries.unshift("SET LOCAL lock_timeout = '#{options[:lock_timeout]}';") if server_version_num >= 90300
@@ -334,12 +334,12 @@ INSERT INTO #{dest_table} (#{fields})
       abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
 
       queries = [
-        "ALTER TABLE #{table} RENAME TO #{intermediate_table};",
-        "ALTER TABLE #{retired_table} RENAME TO #{table};"
+        "ALTER TABLE #{quote_ident(table)} RENAME TO #{quote_ident(intermediate_table)};",
+        "ALTER TABLE #{quote_ident(retired_table)} RENAME TO #{quote_ident(table)};"
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{sequence["sequence_name"]} OWNED BY #{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{table}.#{sequence["related_column"]};"
       end
 
       run_queries(queries)
@@ -353,7 +353,7 @@ INSERT INTO #{dest_table} (#{fields})
 
       existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }
       analyze_list = existing_tables + [parent_table]
-      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{t};" }
+      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{quote_ident(t)};" }
     end
 
     # arguments
@@ -499,18 +499,18 @@ INSERT INTO #{dest_table} (#{fields})
     end
 
     def max_id(table, primary_key, below: nil, where: nil)
-      query = "SELECT MAX(#{primary_key}) FROM #{table}"
+      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_ident(table)}"
       conditions = []
-      conditions << "#{primary_key} <= #{below}" if below
+      conditions << "#{quote_ident(primary_key)} <= #{below}" if below
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
       execute(query)[0]["max"].to_i
     end
 
     def min_id(table, primary_key, column, cast, starting_time, where)
-      query = "SELECT MIN(#{primary_key}) FROM #{table}"
+      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_ident(table)}"
       conditions = []
-      conditions << "#{column} >= #{sql_date(starting_time, cast)}" if starting_time
+      conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
       (execute(query)[0]["min"] || 1).to_i
@@ -593,6 +593,10 @@ INSERT INTO #{dest_table} (#{fields})
       else
         date.next_month(count)
       end
+    end
+
+    def quote_ident(value)
+      PG::Connection.quote_ident(value)
     end
 
     def settings_from_trigger(original_table, table)

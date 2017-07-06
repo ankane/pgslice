@@ -8,6 +8,7 @@ conn.exec <<-SQL
 SET client_min_messages = warning;
 DROP TABLE IF EXISTS posts_intermediate CASCADE;
 DROP TABLE IF EXISTS posts CASCADE;
+DROP TABLE IF EXISTS posts_retired CASCADE;
 DROP FUNCTION IF EXISTS posts_insert_trigger();
 CREATE TABLE posts (
   id integer PRIMARY KEY,

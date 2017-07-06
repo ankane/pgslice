@@ -1,3 +1,7 @@
+## 0.3.5 [unreleased]
+
+- Quote identifiers
+
 ## 0.3.4
 
 - Added `analyze` method
