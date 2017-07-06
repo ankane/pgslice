@@ -1,4 +1,4 @@
-## 0.3.4 [unreleased]
+## 0.3.4
 
 - Added `analyze` method
 - Fixed `fill` with `--dry-run` option

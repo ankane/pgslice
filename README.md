@@ -54,7 +54,13 @@ This will give you the `pgslice` command.
 
   To sync data across different databases, check out [pgsync](https://github.com/ankane/pgsync).
 
-6. Swap the intermediate table with the original table
+6. Analyze tables
+
+  ```sh
+  pgslice analyze <table>
+  ```
+
+7. Swap the intermediate table with the original table
 
   ```sh
   pgslice swap <table>
@@ -62,13 +68,13 @@ This will give you the `pgslice` command.
 
   The original table is renamed `<table>_retired` and the intermediate table is renamed `<table>`.
 
-7. Fill the rest (rows inserted between the first fill and the swap)
+8. Fill the rest (rows inserted between the first fill and the swap)
 
   ```sh
   pgslice fill <table> --swapped
   ```
 
-8. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/current/static/app-pgdump.html) and drop it
+9. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/current/static/app-pgdump.html) and drop it
 
   ```sql
   pg_dump -c -Fc -t <table>_retired $PGSLICE_URL > <table>_retired.dump
