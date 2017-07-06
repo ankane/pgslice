@@ -37,8 +37,10 @@ module PgSlice
         unswap
       when "unprep"
         unprep
+      when "analyze"
+        analyze
       when nil
-        log "Commands: add_partitions, fill, prep, swap, unprep, unswap"
+        log "Commands: add_partitions, analyze, fill, prep, swap, unprep, unswap"
       else
         abort "Unknown command: #{@command}"
       end
@@ -280,9 +282,7 @@ INSERT INTO #{dest_table} (#{fields})
     WHERE #{where}
         SQL
 
-        log_sql(query)
-        log_sql
-        execute(query)
+        run_query(query)
 
         starting_id += batch_size
         i += 1
@@ -337,6 +337,17 @@ INSERT INTO #{dest_table} (#{fields})
       end
 
       run_queries(queries)
+    end
+
+    def analyze
+      table = arguments.first
+      parent_table = options[:swapped] ? table : intermediate_name(table)
+
+      abort "Usage: pgslice analyze <table>" if arguments.length != 1
+
+      existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }
+      analyze_list = existing_tables + [parent_table]
+      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{t};" }
     end
 
     # arguments
@@ -420,18 +431,26 @@ INSERT INTO #{dest_table} (#{fields})
         execute("SET LOCAL client_min_messages TO warning") unless options[:dry_run]
         log_sql "BEGIN;"
         log_sql
-        queries.each do |query|
-          log_sql query
-          log_sql
-          unless options[:dry_run]
-            begin
-              execute(query)
-            rescue PG::ServerError => e
-              abort("#{e.class.name}: #{e.message}")
-            end
-          end
-        end
+        run_queries_without_transaction(queries)
         log_sql "COMMIT;"
+      end
+    end
+
+    def run_query(query)
+      log_sql query
+      unless options[:dry_run]
+        begin
+          execute(query)
+        rescue PG::ServerError => e
+          abort("#{e.class.name}: #{e.message}")
+        end
+      end
+      log_sql
+    end
+
+    def run_queries_without_transaction(queries)
+      queries.each do |query|
+        run_query(query)
       end
     end
 

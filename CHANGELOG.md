@@ -1,3 +1,8 @@
+## 0.3.4 [unreleased]
+
+- Added `analyze` method
+- Fixed `fill` with `--dry-run` option
+
 ## 0.3.3
 
 - Fixed error when creating partitions
