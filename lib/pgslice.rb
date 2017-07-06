@@ -134,6 +134,7 @@ SQL
 
       index_defs = execute("select pg_get_indexdef(indexrelid) from pg_index where indrelid = $1::regclass AND indisprimary = 'f'", [original_table]).map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
+      abort "No primary key" unless primary_key
 
       queries = []
 
@@ -266,6 +267,11 @@ CREATE OR REPLACE FUNCTION #{trigger_name}()
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
+
+      if batch_count == 0
+        log_sql "/* nothing to fill */"
+      end
+
       while starting_id < max_source_id
         where = "#{primary_key} > #{starting_id} AND #{primary_key} <= #{starting_id + batch_size}"
         if starting_time
