@@ -218,16 +218,16 @@ SQL
 
         if trigger_defs.any?
           queries << <<-SQL
-  CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
-      RETURNS trigger AS $$
-      BEGIN
-          IF #{trigger_defs.join("\n        ELSIF ")}
-          ELSE
-              RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-          END IF;
-          RETURN NULL;
-      END;
-      $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
+    RETURNS trigger AS $$
+    BEGIN
+        IF #{trigger_defs.join("\n        ELSIF ")}
+        ELSE
+            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+        END IF;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
           SQL
         end
       end
