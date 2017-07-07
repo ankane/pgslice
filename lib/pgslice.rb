@@ -112,7 +112,7 @@ SQL
 
       queries = [
         "DROP TABLE #{quote_ident(intermediate_table)} CASCADE;",
-        "DROP FUNCTION IF EXISTS #{trigger_name}();"
+        "DROP FUNCTION IF EXISTS #{quote_ident(trigger_name)}();"
       ]
       run_queries(queries)
     end
