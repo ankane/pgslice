@@ -172,7 +172,7 @@ CREATE TABLE #{quote_ident(partition_name)}
       future_defs = []
       past_defs = []
       name_format = self.name_format(period)
-      existing_tables = self.existing_tables(like: "#{original_table}_%").select { |t| /\A#{Regexp.escape("#{original_table}_")}\d{6,8}\z/.match(t) }
+      existing_tables = existing_partitions(original_table)
       existing_tables = (existing_tables + added_partitions).uniq.sort
 
       existing_tables.each do |table|
@@ -236,7 +236,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       if period
         name_format = self.name_format(period)
 
-        existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }.sort
+        existing_tables = existing_partitions(table)
         if existing_tables.any?
           starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
           ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
@@ -351,7 +351,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
 
       abort "Usage: pgslice analyze <table>" if arguments.length != 1
 
-      existing_tables = self.existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }
+      existing_tables = existing_partitions(table)
       analyze_list = existing_tables + [parent_table]
       run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{quote_ident(t)};" }
     end
@@ -462,6 +462,10 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
 
     def server_version_num
       execute("SHOW server_version_num")[0]["server_version_num"].to_i
+    end
+
+    def existing_partitions(table)
+      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }
     end
 
     def existing_tables(like:)
