@@ -1,6 +1,10 @@
+## 0.3.6 [unreleased]
+
+- Fixed drop trigger on `unprep` when table name not lowercase
+
 ## 0.3.5
 
-- Quote identifiers
+- Added support for non-lowercase tables and columns
 
 ## 0.3.4
 
