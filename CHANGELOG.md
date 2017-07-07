@@ -1,6 +1,7 @@
 ## 0.3.6 [unreleased]
 
 - Fixed drop trigger on `unprep` for non-lowercase tables
+- Fixed index creation for non-lowercase tables
 
 ## 0.3.5
 
