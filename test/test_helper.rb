@@ -11,7 +11,7 @@ DROP TABLE IF EXISTS "Posts" CASCADE;
 DROP TABLE IF EXISTS "Posts_retired" CASCADE;
 DROP FUNCTION IF EXISTS "Posts_insert_trigger"();
 CREATE TABLE "Posts" (
-  "Id" integer PRIMARY KEY,
+  "Id" SERIAL PRIMARY KEY,
   "createdAt" timestamp
 );
 CREATE INDEX ON "Posts" ("createdAt");

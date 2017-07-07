@@ -315,7 +315,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_ident(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
       queries.unshift("SET LOCAL lock_timeout = '#{options[:lock_timeout]}';") if server_version_num >= 90300
@@ -339,7 +339,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{table}.#{sequence["related_column"]};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_ident(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
       run_queries(queries)
