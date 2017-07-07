@@ -1,6 +1,6 @@
 ## 0.3.6 [unreleased]
 
-- Fixed drop trigger on `unprep` when table name not lowercase
+- Fixed drop trigger on `unprep` for non-lowercase tables
 
 ## 0.3.5
 
