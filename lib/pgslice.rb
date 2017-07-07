@@ -196,16 +196,33 @@ CREATE TABLE #{quote_ident(partition_name)}
 
       if trigger_defs.any?
         queries << <<-SQL
-CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
-    RETURNS trigger AS $$
-    BEGIN
-        IF #{trigger_defs.join("\n        ELSIF ")}
-        ELSE
-            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-        END IF;
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}
+  RETURNS trigger
+  LANGUAGE plpgsql
+AS $function$
+  DECLARE
+    tbl_month TEXT;
+    tbl_zero TEXT;
+    tbl_year TEXT;
+    tbl_name TEXT;
+    stmt TEXT;
+  BEGIN
+    tbl_month = extract(month from NEW.created_at)::text;
+    tbl_year = extract(year from NEW.created_at)::text;
+
+    if extract(month from NEW.created_at) < 10 THEN
+       tbl_zero = '0';
+    ELSE
+       tbl_zero = '';
+    END IF;
+    
+    tbl_name = '#{partition_name}_' || tbl_year || tbl_zero || tbl_month;
+    stmt = format('INSERT INTO %I VALUES ($1.*);', tbl_name);
+    EXECUTE stmt
+    USING NEW;
+    RETURN NEW;
+  END
+ $function$;
         SQL
       end
 
