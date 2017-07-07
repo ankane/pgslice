@@ -132,7 +132,7 @@ SQL
       # ensure table has trigger
       abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
 
-      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index INNER JOIN pg_stat_user_indexes USING (indexrelid) WHERE relname = $1 AND schemaname = $2 AND indisprimary = 'f'", [original_table, schema]).map { |r| r["pg_get_indexdef"] }
+      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema, original_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
 
       queries = []
@@ -603,8 +603,12 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       PG::Connection.quote_ident(value)
     end
 
+    def regclass(schema, table)
+      "'#{quote_ident(schema)}.#{quote_ident(table)}'::regclass"
+    end
+
     def fetch_trigger(trigger_name, table)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND EXISTS (SELECT 1 FROM pg_stat_user_tables WHERE relid = tgrelid AND relname = $2 AND schemaname = $3)", [trigger_name, table, schema])[0]
+      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(schema, table)}", [trigger_name])[0]
     end
 
     def settings_from_trigger(original_table, table)
