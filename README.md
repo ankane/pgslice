@@ -364,3 +364,13 @@ Everyone is encouraged to help improve this project. Here are a few ways you can
 - Fix bugs and [submit pull requests](https://github.com/ankane/pgslice/pulls)
 - Write, clarify, or fix documentation
 - Suggest or add new features
+
+To run tests, do:
+
+```sh
+git clone https://github.com/ankane/pgslice.git
+cd pgslice
+bundle install
+createdb pgslice_test
+bundle exec rake
+```
