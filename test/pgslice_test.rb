@@ -9,24 +9,25 @@ class PgSliceTest < Minitest::Test
     assert_period("month")
   end
 
-  def assert_period(period)
-    [
-      "prep Posts createdAt #{period}",
-      "add_partitions Posts --intermediate --past 1 --future 1",
-      "fill Posts",
-      "analyze Posts",
-      "swap Posts",
-      "fill Posts --swapped",
-      "add_partitions Posts --future 3",
-      "unswap Posts",
-      "unprep Posts"
-    ].each do |command|
-      puts "pgslice #{command}"
-      puts
-      PgSlice::Client.new("#{command} --url pgslice_test".split(" ")).perform
-      puts
-    end
+  private
 
+  def assert_period(period)
+    run_command "prep Posts createdAt #{period}"
+    run_command "add_partitions Posts --intermediate --past 1 --future 1"
+    run_command "fill Posts"
+    run_command "analyze Posts"
+    run_command "swap Posts"
+    run_command "fill Posts --swapped"
+    run_command "add_partitions Posts --future 3"
+    run_command "unswap Posts"
+    run_command "unprep Posts"
     assert true
+  end
+
+  def run_command(command)
+    puts "pgslice #{command}"
+    puts
+    PgSlice::Client.new("#{command} --url pgslice_test".split(" ")).perform
+    puts
   end
 end
