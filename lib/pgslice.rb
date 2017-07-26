@@ -76,6 +76,10 @@ module PgSlice
 CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING ALL);
       SQL
 
+      foreign_keys(table).each do |fk_def|
+        queries << "ALTER TABLE #{quote_ident(intermediate_table)} ADD #{fk_def}"
+      end
+
       unless options[:no_partition]
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
@@ -133,6 +137,8 @@ SQL
       abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
 
       index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema, original_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+      fk_defs = foreign_keys(original_table)
+
       primary_key = self.primary_key(table)
 
       queries = []
@@ -164,6 +170,10 @@ CREATE TABLE #{quote_ident(partition_name)}
 
         index_defs.each do |index_def|
           queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_ident(partition_name)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+        end
+
+        fk_defs.each do |fk_def|
+          queries << "ALTER TABLE #{quote_ident(partition_name)} ADD #{fk_def}"
         end
       end
 
@@ -639,6 +649,10 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       end
 
       [period, field, cast, needs_comment]
+    end
+
+    def foreign_keys(table)
+      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(schema, table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
   end
 end

@@ -1,6 +1,15 @@
 require_relative "test_helper"
 
 class PgSliceTest < Minitest::Test
+  def setup
+    create_tables
+    populate_data
+  end
+
+  def teardown
+    drop_tables
+  end
+
   def test_day
     assert_period("day")
   end
