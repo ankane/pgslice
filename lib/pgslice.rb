@@ -77,7 +77,7 @@ CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCL
       SQL
 
       foreign_keys(table).each do |fk_def|
-        queries << "ALTER TABLE #{quote_ident(intermediate_table)} ADD #{fk_def}"
+        queries << "ALTER TABLE #{quote_ident(intermediate_table)} ADD #{fk_def};"
       end
 
       unless options[:no_partition]
@@ -173,7 +173,7 @@ CREATE TABLE #{quote_ident(partition_name)}
         end
 
         fk_defs.each do |fk_def|
-          queries << "ALTER TABLE #{quote_ident(partition_name)} ADD #{fk_def}"
+          queries << "ALTER TABLE #{quote_ident(partition_name)} ADD #{fk_def};"
         end
       end
 

@@ -1,3 +1,7 @@
+## 0.4.0 [unreleased]
+
+- Added support for foreign keys
+
 ## 0.3.6
 
 - Fixed drop trigger on `unprep` for non-lowercase tables
