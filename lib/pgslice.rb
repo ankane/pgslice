@@ -72,11 +72,25 @@ module PgSlice
 
       queries = []
 
-      queries << <<-SQL
-CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING ALL);
-      SQL
+      if options[:declarative] && !options[:no_partition]
+        queries << <<-SQL
+CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
+        SQL
 
-      unless options[:no_partition]
+        # add comment
+        cast = column_cast(table, column)
+
+        primary_key = self.primary_key(table)
+        queries << <<-SQL
+COMMENT ON TABLE #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast},primary_key:#{primary_key}';
+SQL
+      else
+        queries << <<-SQL
+CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING ALL);
+SQL
+      end
+
+      if !options[:no_partition] && !options[:declarative]
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
 CREATE FUNCTION #{quote_ident(trigger_name)}()
@@ -130,14 +144,15 @@ SQL
       range = (-1 * past)..future
 
       # ensure table has trigger
-      abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger?(trigger_name, table)
+      has_trigger = has_trigger?(trigger_name, table)
+      abort "No trigger on table: #{table}\nDid you mean to use --intermediate?" unless has_trigger || has_comment?(table)
 
       index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema, original_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
       primary_key = self.primary_key(table)
 
       queries = []
 
-      period, field, cast, needs_comment = settings_from_trigger(original_table, table)
+      period, field, cast, needs_comment, primary_key = settings_from_trigger(original_table, table)
       abort "Could not read settings" unless period
 
       if needs_comment
@@ -154,11 +169,17 @@ SQL
         next if table_exists?(partition_name)
         added_partitions << partition_name
 
-        queries << <<-SQL
+        if has_trigger
+          queries << <<-SQL
 CREATE TABLE #{quote_ident(partition_name)}
     (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
     INHERITS (#{quote_ident(table)});
-        SQL
+SQL
+        else
+          queries << <<-SQL
+CREATE TABLE #{quote_ident(partition_name)} PARTITION OF #{quote_ident(table)} FOR VALUES FROM (#{sql_date(day, cast)}) TO (#{sql_date(advance_date(day, period, 1), cast)});
+SQL
+        end
 
         queries << "ALTER TABLE #{quote_ident(partition_name)} ADD PRIMARY KEY (#{quote_ident(primary_key)});" if primary_key
 
@@ -167,35 +188,36 @@ CREATE TABLE #{quote_ident(partition_name)}
         end
       end
 
-      # update trigger based on existing partitions
-      current_defs = []
-      future_defs = []
-      past_defs = []
-      name_format = self.name_format(period)
-      existing_tables = existing_partitions(original_table)
-      existing_tables = (existing_tables + added_partitions).uniq.sort
+      if has_trigger
+        # update trigger based on existing partitions
+        current_defs = []
+        future_defs = []
+        past_defs = []
+        name_format = self.name_format(period)
+        existing_tables = existing_partitions(original_table)
+        existing_tables = (existing_tables + added_partitions).uniq.sort
 
-      existing_tables.each do |table|
-        day = DateTime.strptime(table.split("_").last, name_format)
-        partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
+        existing_tables.each do |table|
+          day = DateTime.strptime(table.split("_").last, name_format)
+          partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
-        sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-            INSERT INTO #{quote_ident(partition_name)} VALUES (NEW.*);"
+          sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
+              INSERT INTO #{quote_ident(partition_name)} VALUES (NEW.*);"
 
-        if day.to_date < today
-          past_defs << sql
-        elsif advance_date(day, period, 1) < today
-          current_defs << sql
-        else
-          future_defs << sql
+          if day.to_date < today
+            past_defs << sql
+          elsif advance_date(day, period, 1) < today
+            current_defs << sql
+          else
+            future_defs << sql
+          end
         end
-      end
 
-      # order by current period, future periods asc, past periods desc
-      trigger_defs = current_defs + future_defs + past_defs.reverse
+        # order by current period, future periods asc, past periods desc
+        trigger_defs = current_defs + future_defs + past_defs.reverse
 
-      if trigger_defs.any?
-        queries << <<-SQL
+        if trigger_defs.any?
+          queries << <<-SQL
 CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     RETURNS trigger AS $$
     BEGIN
@@ -206,7 +228,8 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
-        SQL
+          SQL
+        end
       end
 
       run_queries(queries) if queries.any?
@@ -231,7 +254,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
-      period, field, cast, needs_comment = settings_from_trigger(table, dest_table)
+      period, field, cast, needs_comment, primary_key = settings_from_trigger(table, dest_table)
 
       if period
         name_format = self.name_format(period)
@@ -368,6 +391,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
         o.integer "--batch-size", default: 10000
         o.boolean "--dry-run", default: false
         o.boolean "--no-partition", default: false
+        o.boolean "--declarative", default: false, help: false
         o.integer "--start"
         o.string "--url"
         o.string "--source-table"
@@ -524,6 +548,11 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       !fetch_trigger(trigger_name, table).nil?
     end
 
+    def has_comment?(table)
+      comment = fetch_comment(table)
+      comment && comment["comment"].start_with?("column:")
+    end
+
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
     def sequences(table)
       query = <<-SQL
@@ -607,6 +636,10 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       "'#{quote_ident(schema)}.#{quote_ident(table)}'::regclass"
     end
 
+    def fetch_comment(table)
+      execute("SELECT obj_description(#{regclass(schema, table)}) AS comment")[0]
+    end
+
     def fetch_trigger(trigger_name, table)
       execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(schema, table)}", [trigger_name])[0]
     end
@@ -615,9 +648,9 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       trigger_name = self.trigger_name(original_table)
 
       needs_comment = false
-      comment = fetch_trigger(trigger_name, table)
+      comment = fetch_trigger(trigger_name, table) || fetch_comment(table)
       if comment
-        field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
+        field, period, cast, primary_key = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil, nil]
       end
 
       unless period
@@ -638,7 +671,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
         needs_comment = true
       end
 
-      [period, field, cast, needs_comment]
+      [period, field, cast, needs_comment, primary_key]
     end
   end
 end
