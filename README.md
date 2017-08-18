@@ -274,11 +274,6 @@ To undo swap, use:
 pgslice unswap <table>
 ```
 
-## Schema Updates
-
-- To add, remove, or modify a column, make the update on the master table only
-- To add or remove an index, make the update on the master table and all partitions
-
 ## App Considerations
 
 This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
@@ -318,6 +313,13 @@ pgslice prep <table> --no-partition
 pgslice fill <table> --where "id > 1000" # use any conditions
 pgslice swap <table>
 ```
+
+## Schema Updates
+
+Once a table is partitioned, here’s how to change the schema:
+
+- To add, remove, or modify a column, make the update on the master table only
+- To add or remove an index, make the update on the master table and all partitions
 
 ## Upgrading
 
