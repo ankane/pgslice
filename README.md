@@ -323,9 +323,9 @@ Once a table is partitioned, here’s how to change the schema:
 
 ## Declarative Partitioning [master]
 
-PostgreSQL 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected.
+Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected.
 
-You can try it out by passing the `--declarative` option to the `prep` command.
+This is enabled by default. To use trigger-based partitioning, pass the `--trigger-based` option to the `prep` command.
 
 ## Upgrading
 

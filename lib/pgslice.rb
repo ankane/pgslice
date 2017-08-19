@@ -59,7 +59,7 @@ module PgSlice
 
       if options[:no_partition]
         abort "Usage: pgslice prep <table> --no-partition" if arguments.length != 1
-        abort "Can't use --declarative and --no-partition" if options[:declarative]
+        abort "Can't use --trigger-based and --no-partition" if options[:trigger_based]
       else
         abort "Usage: pgslice prep <table> <column> <period>" if arguments.length != 3
       end
@@ -73,7 +73,9 @@ module PgSlice
 
       queries = []
 
-      if options[:declarative]
+      declarative = server_version_num >= 100000 && !options[:trigger_based]
+
+      if declarative
         queries << <<-SQL
 CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
@@ -93,7 +95,7 @@ CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCL
         end
       end
 
-      if !options[:no_partition] && !options[:declarative]
+      if !options[:no_partition] && !declarative
         sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
 CREATE FUNCTION #{quote_ident(trigger_name)}()
@@ -409,7 +411,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
         o.integer "--batch-size", default: 10000
         o.boolean "--dry-run", default: false
         o.boolean "--no-partition", default: false
-        o.boolean "--declarative", default: false
+        o.boolean "--trigger-based", default: false
         o.integer "--start"
         o.string "--url"
         o.string "--source-table"
@@ -691,6 +693,10 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
 
     def foreign_keys(table)
       execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(schema, table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
+    end
+
+    def server_version_num
+      execute("SHOW server_version_num").first["server_version_num"].to_i
     end
   end
 end

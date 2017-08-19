@@ -1,10 +1,6 @@
 require_relative "test_helper"
 
 class PgSliceTest < Minitest::Test
-  def setup
-    @declarative = false
-  end
-
   def test_day
     assert_period "day"
   end
@@ -22,16 +18,14 @@ class PgSliceTest < Minitest::Test
     assert true
   end
 
-  def test_declarative
-    skip if server_version_num < 100000
-    @declarative = true
-    assert_period "month"
+  def test_trigger_based
+    assert_period "month", trigger_based: true
   end
 
   private
 
-  def assert_period(period)
-    run_command "prep Posts createdAt #{period}"
+  def assert_period(period, trigger_based: false)
+    run_command "prep Posts createdAt #{period} #{"--trigger-based" if trigger_based}"
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
     now = Time.now
     time_format = period == "month" ? "%Y%m" : "%Y%m%d"
@@ -47,7 +41,7 @@ class PgSliceTest < Minitest::Test
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("createdAt") VALUES (NOW()) RETURNING "Id"').first
-    if @declarative
+    if server_version_num > 100000 && !trigger_based
       assert_equal 10001, insert_result["Id"].to_i
     else
       assert_nil insert_result
@@ -71,7 +65,6 @@ class PgSliceTest < Minitest::Test
   end
 
   def run_command(command)
-    command = "#{command} --declarative" if @declarative
     puts "pgslice #{command}"
     puts
     PgSlice::Client.new("#{command} --url pgslice_test".split(" ")).perform
