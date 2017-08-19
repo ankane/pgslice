@@ -9,19 +9,30 @@ class PgSliceTest < Minitest::Test
     assert_period("month")
   end
 
+  def test_no_partition
+    run_command "prep Posts --no-partition"
+    run_command "fill Posts"
+    run_command "swap Posts"
+    run_command "unswap Posts"
+    run_command "unprep Posts"
+    assert true
+  end
+
   private
 
   def assert_period(period)
     run_command "prep Posts createdAt #{period}"
-    assert_foreign_key "Posts_intermediate"
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
+    now = Time.now
     time_format = period == "month" ? "%Y%m" : "%Y%m%d"
-    assert_foreign_key "Posts_#{Time.now.strftime(time_format)}"
+    assert_foreign_key "Posts_#{now.strftime(time_format)}"
     run_command "fill Posts"
     run_command "analyze Posts"
     run_command "swap Posts"
     run_command "fill Posts --swapped"
     run_command "add_partitions Posts --future 3"
+    days = period == "month" ? 90 : 3
+    assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
     run_command "unswap Posts"
     run_command "unprep Posts"
     assert true
