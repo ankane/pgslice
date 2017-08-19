@@ -6,11 +6,11 @@ class PgSliceTest < Minitest::Test
   end
 
   def test_day
-    assert_period("day")
+    assert_period "day"
   end
 
   def test_month
-    assert_period("month")
+    assert_period "month"
   end
 
   def test_no_partition
@@ -25,7 +25,7 @@ class PgSliceTest < Minitest::Test
   def test_declarative
     skip if server_version_num < 100000
     @declarative = true
-    assert_period("month")
+    assert_period "month"
   end
 
   private
