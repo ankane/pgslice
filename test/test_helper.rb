@@ -21,5 +21,5 @@ CREATE TABLE "Posts" (
   CONSTRAINT "foreign_key_1" FOREIGN KEY ("UserId") REFERENCES "Users"("Id")
 );
 CREATE INDEX ON "Posts" ("createdAt");
-INSERT INTO "Posts" (SELECT n AS id, NULL, NOW() FROM generate_series(1, 10000) n);
+INSERT INTO "Posts" ("createdAt") SELECT NOW() FROM generate_series(1, 10000) n;
 SQL
