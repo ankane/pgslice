@@ -35,7 +35,8 @@ class PgSliceTest < Minitest::Test
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
     now = Time.now
     time_format = period == "month" ? "%Y%m" : "%Y%m%d"
-    assert_foreign_key "Posts_#{now.strftime(time_format)}"
+    partition_name = "Posts_#{now.strftime(time_format)}"
+    assert_foreign_key partition_name
     run_command "fill Posts"
     run_command "analyze Posts"
     run_command "swap Posts"
@@ -43,6 +44,12 @@ class PgSliceTest < Minitest::Test
     run_command "add_partitions Posts --future 3"
     days = period == "month" ? 90 : 3
     assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
+
+    # test adding column
+    add_column "Posts", "updatedAt"
+    assert_column "Posts", "updatedAt"
+    assert_column partition_name, "updatedAt"
+
     run_command "unswap Posts"
     run_command "unprep Posts"
     assert true
@@ -56,13 +63,21 @@ class PgSliceTest < Minitest::Test
     puts
   end
 
+  def add_column(table, column)
+    $conn.exec("ALTER TABLE \"#{table}\" ADD COLUMN \"#{column}\" timestamp")
+  end
+
+  def assert_column(table, column)
+    assert $conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first.key?(column), "Missing column #{column} on #{table}"
+  end
+
   def assert_foreign_key(table_name)
     result = $conn.exec <<-SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
       WHERE contype = 'f' AND conrelid = '"#{table_name}"'::regclass
     SQL
-    assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?
+    assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
   end
 
   def server_version_num
