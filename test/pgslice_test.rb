@@ -46,9 +46,10 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
 
     # test insert with null field
-    assert_raises(PG::ServerError) do
+    error = assert_raises(PG::ServerError) do
       $conn.exec('INSERT INTO "Posts" ("UserId") VALUES (1)')
     end
+    assert_includes error.message, "partition"
 
     # test adding column
     add_column "Posts", "updatedAt"
