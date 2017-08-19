@@ -1,6 +1,10 @@
 require_relative "test_helper"
 
 class PgSliceTest < Minitest::Test
+  def setup
+    @declarative = false
+  end
+
   def test_day
     assert_period("day")
   end
@@ -16,6 +20,12 @@ class PgSliceTest < Minitest::Test
     run_command "unswap Posts"
     run_command "unprep Posts"
     assert true
+  end
+
+  def test_declarative
+    skip if server_version_num < 100000
+    @declarative = true
+    assert_period("month")
   end
 
   private
@@ -39,6 +49,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def run_command(command)
+    command = "#{command} --declarative" if @declarative
     puts "pgslice #{command}"
     puts
     PgSlice::Client.new("#{command} --url pgslice_test".split(" ")).perform
@@ -52,5 +63,9 @@ class PgSliceTest < Minitest::Test
       WHERE contype = 'f' AND conrelid = '"#{table_name}"'::regclass
     SQL
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?
+  end
+
+  def server_version_num
+    $conn.exec("SHOW server_version_num").first["server_version_num"].to_i
   end
 end

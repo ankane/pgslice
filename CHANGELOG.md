@@ -1,5 +1,6 @@
 ## 0.4.0 [unreleased]
 
+- Added support for declarative partitioning
 - Added support for foreign keys
 
 ## 0.3.6
