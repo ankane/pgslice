@@ -75,7 +75,7 @@ module PgSlice
 
       declarative = server_version_num >= 100000 && !options[:trigger_based]
 
-      if declarative
+      if declarative && !options[:no_partition]
         queries << <<-SQL
 CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
