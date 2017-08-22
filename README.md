@@ -4,6 +4,8 @@ Postgres partitioning as easy as pie. Works great for both new and existing tabl
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
+[![Build Status](https://travis-ci.org/ankane/pgslice.svg?branch=master)](https://travis-ci.org/ankane/pgslice)
+
 ## Install
 
 pgslice is a command line tool. To install, run:
