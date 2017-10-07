@@ -92,6 +92,18 @@ pgslice prep visits created_at month
 ```
 
 ```sql
+-- Postgres 10
+
+BEGIN;
+
+CREATE TABLE visits_intermediate (LIKE visits INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (created_at);
+
+COMMENT ON TABLE "Posts_intermediate" is 'column:created_at,period:day';
+
+COMMIT;
+
+-- Postgres 9.6 and below
+
 BEGIN;
 
 CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
@@ -117,6 +129,32 @@ pgslice add_partitions visits --intermediate --past 1 --future 1
 ```
 
 ```sql
+-- Postgres 10
+
+BEGIN;
+
+CREATE TABLE visits_201608 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-08-01') TO ('2016-09-01');
+
+ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201608 USING btree (user_id);
+
+CREATE TABLE visits_201609 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-09-01') TO ('2016-10-01');
+
+ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201609 USING btree (user_id);
+
+CREATE TABLE visits_201610 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-10-01') TO ('2016-11-01');
+
+ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
+
+CREATE INDEX ON visits_201610 USING btree (user_id);
+
+COMMIT;
+
+-- Postgres 9.6 and below
+
 BEGIN;
 
 CREATE TABLE visits_201608
