@@ -98,7 +98,7 @@ BEGIN;
 
 CREATE TABLE visits_intermediate (LIKE visits INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (created_at);
 
-COMMENT ON TABLE "Posts_intermediate" is 'column:created_at,period:day';
+COMMENT ON TABLE visits_intermediate is 'column:created_at,period:day';
 
 COMMIT;
 
