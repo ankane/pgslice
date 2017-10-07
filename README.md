@@ -282,7 +282,7 @@ This set up allows you to read and write with the original table name with no kn
 
 ### Writes
 
-If you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
+Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
 
 1. Insert directly into the partition
 2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
@@ -323,7 +323,7 @@ Once a table is partitioned, here’s how to change the schema:
 - To add, remove, or modify a column, make the update on the master table only
 - To add or remove an index, make the update on the master table and all partitions
 
-## Declarative Partitioning [master]
+## Declarative Partitioning
 
 Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected. If you prefer to use trigger-based partitioning instead (not recommended), pass the `--trigger-based` option to the `prep` command.
 

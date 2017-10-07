@@ -1,4 +1,4 @@
-## 0.4.0 [unreleased]
+## 0.4.0
 
 - Added support for declarative partitioning
 - Added support for foreign keys
