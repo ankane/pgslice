@@ -377,7 +377,7 @@ To use master, run:
 
 ```sh
 gem install specific_install
-gem specific_install ankane/pgslice
+gem specific_install https://github.com/ankane/pgslice.git
 ```
 
 ## Docker
