@@ -1,3 +1,7 @@
+## 0.4.1 [unreleased]
+
+- Use latest partition for schema
+
 ## 0.4.0
 
 - Added support for declarative partitioning

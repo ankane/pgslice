@@ -170,7 +170,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
         elsif options[:intermediate]
           original_table
         else
-          "#{original_table}_#{today.strftime(name_format(period))}"
+          existing_partitions(original_table, period).last
         end
       index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema, schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
       fk_defs = foreign_keys(schema_table)
@@ -213,7 +213,7 @@ CREATE TABLE #{quote_ident(partition_name)}
         future_defs = []
         past_defs = []
         name_format = self.name_format(period)
-        existing_tables = existing_partitions(original_table)
+        existing_tables = existing_partitions(original_table, period)
         existing_tables = (existing_tables + added_partitions).uniq.sort
 
         existing_tables.each do |table|
@@ -278,7 +278,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       if period
         name_format = self.name_format(period)
 
-        existing_tables = existing_partitions(table)
+        existing_tables = existing_partitions(table, period)
         if existing_tables.any?
           starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
           ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
@@ -508,8 +508,18 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       execute("SHOW server_version_num")[0]["server_version_num"].to_i
     end
 
-    def existing_partitions(table)
-      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{6,8}\z/.match(t) }
+    def existing_partitions(table, period = nil)
+      count =
+        case period
+        when "day"
+          8
+        when "month"
+          6
+        else
+          "6,8"
+        end
+
+      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t) }
     end
 
     def existing_tables(like:)
