@@ -1,4 +1,4 @@
-## 0.5.0 [unreleased]
+## 0.4.1 [unreleased]
 
 - Better support for schemas
 - Use latest partition for schema
