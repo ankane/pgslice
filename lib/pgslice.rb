@@ -54,7 +54,9 @@ module PgSlice
 
     def prep
       table, column, period = arguments
+      table = qualify_table(table)
       intermediate_table = "#{table}_intermediate"
+
       trigger_name = self.trigger_name(table)
 
       if options[:no_partition]
@@ -77,21 +79,21 @@ module PgSlice
 
       if declarative && !options[:no_partition]
         queries << <<-SQL
-CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
+CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_table(column)});
         SQL
 
         # add comment
         cast = column_cast(table, column)
         queries << <<-SQL
-COMMENT ON TABLE #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
         SQL
       else
         queries << <<-SQL
-CREATE TABLE #{quote_ident(intermediate_table)} (LIKE #{quote_ident(table)} INCLUDING ALL);
+CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING ALL);
         SQL
 
         foreign_keys(table).each do |fk_def|
-          queries << "ALTER TABLE #{quote_ident(intermediate_table)} ADD #{fk_def};"
+          queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD #{fk_def};"
         end
       end
 
@@ -108,13 +110,13 @@ CREATE FUNCTION #{quote_ident(trigger_name)}()
 
         queries << <<-SQL
 CREATE TRIGGER #{quote_ident(trigger_name)}
-    BEFORE INSERT ON #{quote_ident(intermediate_table)}
+    BEFORE INSERT ON #{quote_table(intermediate_table)}
     FOR EACH ROW EXECUTE PROCEDURE #{quote_ident(trigger_name)}();
         SQL
 
         cast = column_cast(table, column)
         queries << <<-SQL
-COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
         SQL
       end
 
@@ -122,7 +124,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
     end
 
     def unprep
-      table = arguments.first
+      table = qualify_table(arguments.first)
       intermediate_table = "#{table}_intermediate"
       trigger_name = self.trigger_name(table)
 
@@ -130,14 +132,14 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
       abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
 
       queries = [
-        "DROP TABLE #{quote_ident(intermediate_table)} CASCADE;",
+        "DROP TABLE #{quote_table(intermediate_table)} CASCADE;",
         "DROP FUNCTION IF EXISTS #{quote_ident(trigger_name)}();"
       ]
       run_queries(queries)
     end
 
     def add_partitions
-      original_table = arguments.first
+      original_table = qualify_table(arguments.first)
       table = options[:intermediate] ? "#{original_table}_intermediate" : original_table
       trigger_name = self.trigger_name(original_table)
 
@@ -158,7 +160,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
       queries = []
 
       if needs_comment
-        queries << "COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(table)} is 'column:#{field},period:#{period},cast:#{cast}';"
+        queries << "COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(table)} is 'column:#{field},period:#{period},cast:#{cast}';"
       end
 
       # today = utc date
@@ -172,7 +174,8 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
         else
           existing_partitions(original_table, period).last
         end
-      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema, schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+
+      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
       fk_defs = foreign_keys(schema_table)
       primary_key = self.primary_key(schema_table)
 
@@ -186,24 +189,24 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_ident(intermediate_ta
 
         if declarative
           queries << <<-SQL
-CREATE TABLE #{quote_ident(partition_name)} PARTITION OF #{quote_ident(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)});
+CREATE TABLE #{quote_table(partition_name)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)});
           SQL
         else
           queries << <<-SQL
-CREATE TABLE #{quote_ident(partition_name)}
+CREATE TABLE #{quote_table(partition_name)}
     (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
-    INHERITS (#{quote_ident(table)});
+    INHERITS (#{quote_table(table)});
           SQL
         end
 
-        queries << "ALTER TABLE #{quote_ident(partition_name)} ADD PRIMARY KEY (#{quote_ident(primary_key)});" if primary_key
+        queries << "ALTER TABLE #{quote_table(partition_name)} ADD PRIMARY KEY (#{quote_ident(primary_key)});" if primary_key
 
         index_defs.each do |index_def|
-          queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_ident(partition_name)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+          queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(partition_name)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
         end
 
         fk_defs.each do |fk_def|
-          queries << "ALTER TABLE #{quote_ident(partition_name)} ADD #{fk_def};"
+          queries << "ALTER TABLE #{quote_table(partition_name)} ADD #{fk_def};"
         end
       end
 
@@ -221,7 +224,7 @@ CREATE TABLE #{quote_ident(partition_name)}
           partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-              INSERT INTO #{quote_ident(partition_name)} VALUES (NEW.*);"
+              INSERT INTO #{quote_table(partition_name)} VALUES (NEW.*);"
 
           if day.to_date < today
             past_defs << sql
@@ -255,7 +258,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     end
 
     def fill
-      table = arguments.first
+      table = qualify_table(arguments.first)
 
       abort "Usage: pgslice fill <table>" if arguments.length != 1
 
@@ -286,6 +289,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       end
 
       schema_table = period && declarative ? existing_tables.last : table
+
       primary_key = self.primary_key(schema_table)
       abort "No primary key" unless primary_key
       max_source_id = max_id(source_table, primary_key)
@@ -326,8 +330,8 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
 
         query = <<-SQL
 /* #{i} of #{batch_count} */
-INSERT INTO #{quote_ident(dest_table)} (#{fields})
-    SELECT #{fields} FROM #{quote_ident(source_table)}
+INSERT INTO #{quote_table(dest_table)} (#{fields})
+    SELECT #{fields} FROM #{quote_table(source_table)}
     WHERE #{where}
         SQL
 
@@ -343,7 +347,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def swap
-      table = arguments.first
+      table = qualify_table(arguments.first)
       intermediate_table = intermediate_name(table)
       retired_table = retired_name(table)
 
@@ -353,8 +357,8 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       abort "Table already exists: #{retired_table}" if table_exists?(retired_table)
 
       queries = [
-        "ALTER TABLE #{quote_ident(table)} RENAME TO #{quote_ident(retired_table)};",
-        "ALTER TABLE #{quote_ident(intermediate_table)} RENAME TO #{quote_ident(table)};"
+        "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(retired_table)};",
+        "ALTER TABLE #{quote_table(intermediate_table)} RENAME TO #{quote_no_schema(table)};"
       ]
 
       self.sequences(table).each do |sequence|
@@ -367,7 +371,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def unswap
-      table = arguments.first
+      table = qualify_table(arguments.first)
       intermediate_table = intermediate_name(table)
       retired_table = retired_name(table)
 
@@ -377,8 +381,8 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
 
       queries = [
-        "ALTER TABLE #{quote_ident(table)} RENAME TO #{quote_ident(intermediate_table)};",
-        "ALTER TABLE #{quote_ident(retired_table)} RENAME TO #{quote_ident(table)};"
+        "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(intermediate_table)};",
+        "ALTER TABLE #{quote_table(retired_table)} RENAME TO #{quote_no_schema(table)};"
       ]
 
       self.sequences(table).each do |sequence|
@@ -389,14 +393,14 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def analyze
-      table = arguments.first
+      table = qualify_table(arguments.first)
       parent_table = options[:swapped] ? table : intermediate_name(table)
 
       abort "Usage: pgslice analyze <table>" if arguments.length != 1
 
       existing_tables = existing_partitions(table)
       analyze_list = existing_tables + [parent_table]
-      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{quote_ident(t)};" }
+      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{quote_table(t)};" }
     end
 
     # arguments
@@ -523,8 +527,8 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def existing_tables(like:)
-      query = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2"
-      execute(query, [schema, like]).map { |r| r["tablename"] }.sort
+      query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2"
+      execute(query, like.split(".", 2)).map { |r| "#{r["schemaname"]}.#{r["tablename"]}" }.sort
     end
 
     def table_exists?(table)
@@ -532,7 +536,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def columns(table)
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2", [schema, table]).map{ |r| r["column_name"] }
+      execute("SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = $1", [table]).map{ |r| r["column_name"] }
     end
 
     # http://stackoverflow.com/a/20537829
@@ -544,20 +548,19 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
         FROM
           pg_index, pg_class, pg_attribute, pg_namespace
         WHERE
-          relname = $2 AND
+          nspname || '.' || relname = $1 AND
           indrelid = pg_class.oid AND
-          nspname = $1 AND
           pg_class.relnamespace = pg_namespace.oid AND
           pg_attribute.attrelid = pg_class.oid AND
           pg_attribute.attnum = any(pg_index.indkey) AND
           indisprimary
       SQL
-      row = execute(query, [schema, table])[0]
+      row = execute(query, [table])[0]
       row && row["attname"]
     end
 
     def max_id(table, primary_key, below: nil, where: nil)
-      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_ident(table)}"
+      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
       conditions = []
       conditions << "#{quote_ident(primary_key)} <= #{below}" if below
       conditions << where if where
@@ -566,7 +569,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def min_id(table, primary_key, column, cast, starting_time, where)
-      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_ident(table)}"
+      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
       conditions = []
       conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
       conditions << where if where
@@ -579,7 +582,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def fetch_comment(table)
-      execute("SELECT obj_description(#{regclass(schema, table)}) AS comment")[0]
+      execute("SELECT obj_description(#{regclass(table)}) AS comment")[0]
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
@@ -603,7 +606,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     # helpers
 
     def trigger_name(table)
-      "#{table}_insert_trigger"
+      "#{table.split(".")[-1]}_insert_trigger"
     end
 
     def intermediate_name(table)
@@ -615,7 +618,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def column_cast(table, column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, table, column])[0]["data_type"]
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema || '.' || table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
     end
 
@@ -662,12 +665,24 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
       PG::Connection.quote_ident(value)
     end
 
-    def regclass(schema, table)
-      "'#{quote_ident(schema)}.#{quote_ident(table)}'::regclass"
+    def quote_table(table)
+      table.split(".", 2).map { |v| quote_ident(v) }.join(".")
+    end
+
+    def quote_no_schema(table)
+      quote_ident(table.split(".", 2)[-1])
+    end
+
+    def regclass(table)
+      "'#{quote_table(table)}'::regclass"
     end
 
     def fetch_trigger(trigger_name, table)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(schema, table)}", [trigger_name])[0]
+      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(table)}", [trigger_name])[0]
+    end
+
+    def qualify_table(table)
+      table.to_s.include?(".") ? table : [schema, table].join(".")
     end
 
     def settings_from_trigger(original_table, table)
@@ -702,7 +717,7 @@ INSERT INTO #{quote_ident(dest_table)} (#{fields})
     end
 
     def foreign_keys(table)
-      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(schema, table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
+      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
 
     def server_version_num
