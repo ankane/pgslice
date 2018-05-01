@@ -199,7 +199,7 @@ CREATE TABLE #{quote_table(partition_name)}
           SQL
         end
 
-        queries << "ALTER TABLE #{quote_table(partition_name)} ADD PRIMARY KEY (#{quote_ident(primary_key)});" if primary_key
+        queries << "ALTER TABLE #{quote_table(partition_name)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
 
         index_defs.each do |index_def|
           queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(partition_name)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
@@ -290,8 +290,9 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
 
       schema_table = period && declarative ? existing_tables.last : table
 
-      primary_key = self.primary_key(schema_table)
+      primary_key = self.primary_key(schema_table)[0]
       abort "No primary key" unless primary_key
+
       max_source_id = max_id(source_table, primary_key)
 
       max_dest_id =
@@ -555,8 +556,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
           pg_attribute.attnum = any(pg_index.indkey) AND
           indisprimary
       SQL
-      row = execute(query, [table])[0]
-      row && row["attname"]
+      execute(query, [table]).map { |r| r["attname"] }
     end
 
     def max_id(table, primary_key, below: nil, where: nil)

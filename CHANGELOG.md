@@ -2,6 +2,7 @@
 
 - Better support for schemas
 - Use latest partition for schema
+- Added support for composite primary keys
 
 ## 0.4.0
 
