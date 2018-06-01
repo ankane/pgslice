@@ -470,6 +470,8 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       end
     rescue PG::ConnectionBad => e
       abort e.message
+    rescue URI::InvalidURIError
+      abort "Invalid url"
     end
 
     def schema
