@@ -293,7 +293,12 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       primary_key = self.primary_key(schema_table)[0]
       abort "No primary key" unless primary_key
 
-      max_source_id = max_id(source_table, primary_key)
+      max_source_id = nil
+      begin
+        max_source_id = max_id(source_table, primary_key)
+      rescue PG::UndefinedFunction
+        abort "Only numeric primary keys are supported"
+      end
 
       max_dest_id =
         if options[:start]
