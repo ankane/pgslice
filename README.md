@@ -394,12 +394,6 @@ This will give you the `pgslice` command.
 - [PostgreSQL Manual](https://www.postgresql.org/docs/current/static/ddl-partitioning.html)
 - [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/Table_partitioning)
 
-## TODO
-
-- Command to sync index changes with partitions
-- Disable indexing for faster `fill`
-- ETA for `fill`
-
 ## Related Projects
 
 Also check out:
