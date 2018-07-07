@@ -82,6 +82,13 @@ module PgSlice
 CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_table(column)});
         SQL
 
+        if server_version_num >= 110000
+          index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+          index_defs.each do |index_def|
+            queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(intermediate_table)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+          end
+        end
+
         # add comment
         cast = column_cast(table, column)
         queries << <<-SQL
@@ -175,7 +182,14 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
           existing_partitions(original_table, period).last
         end
 
-      index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+      # indexes automatically propagate in Postgres 11+
+      index_defs =
+        if !declarative || server_version_num < 110000
+          execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+        else
+          []
+        end
+
       fk_defs = foreign_keys(schema_table)
       primary_key = self.primary_key(schema_table)
 

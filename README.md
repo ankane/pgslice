@@ -359,7 +359,7 @@ pgslice swap <table>
 Once a table is partitioned, here’s how to change the schema:
 
 - To add, remove, or modify a column, make the update on the master table only
-- To add or remove an index, make the update on the master table and all partitions
+- To add or remove an index, make the update on the master table and all partitions (for Postgres 11, make the update on the master table only)
 
 ## Declarative Partitioning
 

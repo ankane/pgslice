@@ -1,3 +1,7 @@
+## 0.4.2 [unreleased]
+
+- Added support for Postgres 11 index improvements
+
 ## 0.4.1
 
 - Better support for schemas
