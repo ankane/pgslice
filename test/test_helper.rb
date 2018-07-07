@@ -3,7 +3,8 @@ Bundler.require(:default)
 require "minitest/autorun"
 require "minitest/pride"
 
-$conn = PG::Connection.open(dbname: "pgslice_test")
+$url = ENV["PGSLICE_URL"] || "postgres://localhost/pgslice_test"
+$conn = PG::Connection.new($url)
 $conn.exec <<-SQL
 SET client_min_messages = warning;
 DROP TABLE IF EXISTS "Posts_intermediate" CASCADE;
