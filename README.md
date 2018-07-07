@@ -425,3 +425,12 @@ bundle install
 createdb pgslice_test
 bundle exec rake
 ```
+
+To test against different versions of Postgres with Docker, use:
+
+```sh
+docker run -p=8000:5432 postgres:10
+TZ=Etc/UTC PGSLICE_URL=postgres://postgres@localhost:8000/postgres bundle exec rake
+```
+
+On Mac, you must use [Docker for Mac](https://www.docker.com/docker-mac) for the port mapping to localhost to work.
