@@ -1,6 +1,7 @@
 ## 0.4.2 [unreleased]
 
 - Added support for Postgres 11 index improvements
+- Added support for all connection options
 
 ## 0.4.1
 

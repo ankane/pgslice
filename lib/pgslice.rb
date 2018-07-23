@@ -473,19 +473,15 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       @connection ||= begin
         url = options[:url] || ENV["PGSLICE_URL"]
         abort "Set PGSLICE_URL or use the --url option" unless url
+
         uri = URI.parse(url)
-        uri_parser = URI::Parser.new
-        config = {
-          host: uri.host,
-          port: uri.port,
-          dbname: uri.path.sub(/\A\//, ""),
-          user: uri.user,
-          password: uri.password,
-          connect_timeout: 1
-        }.reject { |_, value| value.to_s.empty? }
-        config.map { |key, value| config[key] = uri_parser.unescape(value) if value.is_a?(String) }
-        @schema = CGI.parse(uri.query.to_s)["schema"][0] || "public"
-        PG::Connection.new(config)
+        params = CGI.parse(uri.query.to_s)
+        # remove schema
+        @schema = Array(params.delete("schema") || "public")[0]
+        uri.query = URI.encode_www_form(params)
+
+        ENV["PGCONNECT_TIMEOUT"] ||= "1"
+        PG::Connection.new(uri.to_s)
       end
     rescue PG::ConnectionBad => e
       abort e.message
