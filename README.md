@@ -365,6 +365,20 @@ Once a table is partitioned, here’s how to change the schema:
 
 Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected. If you prefer to use trigger-based partitioning instead (not recommended), pass the `--trigger-based` option to the `prep` command.
 
+## Data Protection
+
+When connecting to a remote database, make sure your connection is secure.
+
+If you do not use a VPN, you must use `sslmode=verify-full` with a root certificate to [protect against MITM attacks](https://www.postgresql.org/docs/current/static/libpq-ssl.html). If you don’t do this, your database credentials can be compromised. This cannot be understated!
+
+Surprisingly and unfortunately, there’s [not a secure way](https://thusoy.com/2016/mitming-postgres) to connect to Heroku Postgres with any client.
+
+For Amazon RDS, download the [root certificate](https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem) and append to your database url:
+
+```
+?sslmode=verify-full&sslrootcert=rds-combined-ca-bundle.pem
+```
+
 ## Upgrading
 
 Run:
