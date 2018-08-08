@@ -5,6 +5,6 @@ begin
   PgSlice::Client.new(ARGV).perform
 rescue PgSlice::Error => e
   abort e.message
-rescue Interrupt => e
+rescue Interrupt
   abort
 end

@@ -105,7 +105,6 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
       end
 
       if !options[:no_partition] && !declarative
-        sql_format = SQL_FORMAT[period.to_sym]
         queries << <<-SQL
 CREATE FUNCTION #{quote_ident(trigger_name)}()
     RETURNS trigger AS $$
@@ -233,8 +232,8 @@ CREATE TABLE #{quote_table(partition_name)}
         existing_tables = existing_partitions(original_table, period)
         existing_tables = (existing_tables + added_partitions).uniq.sort
 
-        existing_tables.each do |table|
-          day = DateTime.strptime(table.split("_").last, name_format)
+        existing_tables.each do |existing_table|
+          day = DateTime.strptime(existing_table.split("_").last, name_format)
           partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
@@ -290,7 +289,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       abort "Table not found: #{source_table}" unless table_exists?(source_table)
       abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
 
-      period, field, cast, needs_comment, declarative = settings_from_trigger(table, dest_table)
+      period, field, cast, _needs_comment, declarative = settings_from_trigger(table, dest_table)
 
       if period
         name_format = self.name_format(period)
@@ -420,7 +419,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
       existing_tables = existing_partitions(table)
       analyze_list = existing_tables + [parent_table]
-      run_queries_without_transaction analyze_list.map { |t| "ANALYZE VERBOSE #{quote_table(t)};" }
+      run_queries_without_transaction(analyze_list.map { |t| "ANALYZE VERBOSE #{quote_table(t)};" })
     end
 
     # arguments
@@ -735,10 +734,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     def foreign_keys(table)
       execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
-    end
-
-    def server_version_num
-      execute("SHOW server_version_num").first["server_version_num"].to_i
     end
   end
 end
