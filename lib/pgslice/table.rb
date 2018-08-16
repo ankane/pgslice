@@ -3,7 +3,7 @@ module PgSlice
     attr_reader :table
 
     def initialize(table)
-      @table = table
+      @table = table.to_s
     end
 
     def to_s
@@ -48,6 +48,43 @@ module PgSlice
       execute(query, table.split(".", 2))
     end
 
+    # http://stackoverflow.com/a/20537829
+    def primary_key
+      query = <<-SQL
+        SELECT
+          pg_attribute.attname,
+          format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
+        FROM
+          pg_index, pg_class, pg_attribute, pg_namespace
+        WHERE
+          nspname || '.' || relname = $1 AND
+          indrelid = pg_class.oid AND
+          pg_class.relnamespace = pg_namespace.oid AND
+          pg_attribute.attrelid = pg_class.oid AND
+          pg_attribute.attnum = any(pg_index.indkey) AND
+          indisprimary
+      SQL
+      execute(query, [table]).map { |r| r["attname"] }
+    end
+
+    def max_id(primary_key, below: nil, where: nil)
+      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
+      conditions = []
+      conditions << "#{quote_ident(primary_key)} <= #{below}" if below
+      conditions << where if where
+      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
+      execute(query)[0]["max"].to_i
+    end
+
+    def min_id(primary_key, column, cast, starting_time, where)
+      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
+      conditions = []
+      conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
+      conditions << where if where
+      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
+      (execute(query)[0]["min"] || 1).to_i
+    end
+
     def existing_partitions(period = nil)
       count =
         case period
@@ -71,6 +108,24 @@ module PgSlice
 
     def execute(*args)
       $client.send(:execute, *args)
+    end
+
+    def quote_ident(value)
+      PG::Connection.quote_ident(value)
+    end
+
+    def quote_table(table)
+      table.to_s.split(".", 2).map { |v| quote_ident(v) }.join(".")
+    end
+
+    def sql_date(time, cast, add_cast = true)
+      if cast == "timestamptz"
+        fmt = "%Y-%m-%d %H:%M:%S UTC"
+      else
+        fmt = "%Y-%m-%d"
+      end
+      str = "'#{time.strftime(fmt)}'"
+      add_cast ? "#{str}::#{cast}" : str
     end
   end
 end

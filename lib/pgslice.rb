@@ -307,14 +307,14 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
         end
       end
 
-      schema_table = period && declarative ? existing_tables.last : table
+      schema_table = period && declarative ? Table.new(existing_tables.last) : table
 
-      primary_key = self.primary_key(schema_table)[0]
+      primary_key = schema_table.primary_key[0]
       abort "No primary key" unless primary_key
 
       max_source_id = nil
       begin
-        max_source_id = max_id(source_table, primary_key)
+        max_source_id = source_table.max_id(primary_key)
       rescue PG::UndefinedFunction
         abort "Only numeric primary keys are supported"
       end
@@ -323,18 +323,18 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
         if options[:start]
           options[:start]
         elsif options[:swapped]
-          max_id(dest_table, primary_key, where: options[:where], below: max_source_id)
+          dest_table.max_id(primary_key, where: options[:where], below: max_source_id)
         else
-          max_id(dest_table, primary_key, where: options[:where])
+          dest_table.max_id(primary_key, where: options[:where])
         end
 
       if max_dest_id == 0 && !options[:swapped]
-        min_source_id = min_id(source_table, primary_key, field, cast, starting_time, options[:where])
+        min_source_id = source_table.min_id(primary_key, field, cast, starting_time, options[:where])
         max_dest_id = min_source_id - 1 if min_source_id
       end
 
       starting_id = max_dest_id
-      fields = columns(source_table).map { |c| quote_ident(c) }.join(", ")
+      fields = source_table.columns.map { |c| quote_ident(c) }.join(", ")
       batch_size = options[:batch_size]
 
       i = 1
@@ -549,39 +549,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     # http://stackoverflow.com/a/20537829
     def primary_key(table)
-      query = <<-SQL
-        SELECT
-          pg_attribute.attname,
-          format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
-        FROM
-          pg_index, pg_class, pg_attribute, pg_namespace
-        WHERE
-          nspname || '.' || relname = $1 AND
-          indrelid = pg_class.oid AND
-          pg_class.relnamespace = pg_namespace.oid AND
-          pg_attribute.attrelid = pg_class.oid AND
-          pg_attribute.attnum = any(pg_index.indkey) AND
-          indisprimary
-      SQL
-      execute(query, [table]).map { |r| r["attname"] }
-    end
-
-    def max_id(table, primary_key, below: nil, where: nil)
-      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
-      conditions = []
-      conditions << "#{quote_ident(primary_key)} <= #{below}" if below
-      conditions << where if where
-      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
-      execute(query)[0]["max"].to_i
-    end
-
-    def min_id(table, primary_key, column, cast, starting_time, where)
-      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
-      conditions = []
-      conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
-      conditions << where if where
-      query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
-      (execute(query)[0]["min"] || 1).to_i
+      Table.new(table).primary_key
     end
 
     def has_trigger?(trigger_name, table)
