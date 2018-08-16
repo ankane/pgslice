@@ -539,19 +539,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       Table.new(table).existing_partitions(period)
     end
 
-    def table_exists?(table)
-      Table.new(table).exists?
-    end
-
-    def columns(table)
-      Table.new(table).columns
-    end
-
-    # http://stackoverflow.com/a/20537829
-    def primary_key(table)
-      Table.new(table).primary_key
-    end
-
     def has_trigger?(trigger_name, table)
       !fetch_trigger(trigger_name, table).nil?
     end
@@ -561,14 +548,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     # helpers
-
-    def trigger_name(table)
-      Table.new(table).trigger_name
-    end
-
-    def column_cast(table, column)
-      Table.new(table).column_cast(column)
-    end
 
     def sql_date(time, cast, add_cast = true)
       if cast == "timestamptz"
@@ -634,7 +613,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def settings_from_trigger(original_table, table)
-      trigger_name = self.trigger_name(original_table)
+      trigger_name = original_table.trigger_name
 
       needs_comment = false
       trigger_comment = fetch_trigger(trigger_name, table)
