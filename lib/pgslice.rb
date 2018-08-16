@@ -96,7 +96,7 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         end
 
         # add comment
-        cast = column_cast(table, column)
+        cast = table.column_cast(column)
         queries << <<-SQL
 COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
         SQL
@@ -105,7 +105,7 @@ COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:
 CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING ALL);
         SQL
 
-        foreign_keys(table).each do |fk_def|
+        table.foreign_keys.each do |fk_def|
           queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD #{fk_def};"
         end
       end
@@ -126,7 +126,7 @@ CREATE TRIGGER #{quote_ident(trigger_name)}
     FOR EACH ROW EXECUTE PROCEDURE #{quote_ident(trigger_name)}();
         SQL
 
-        cast = column_cast(table, column)
+        cast = table.column_cast(column)
         queries << <<-SQL
 COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
         SQL
@@ -563,12 +563,11 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     # helpers
 
     def trigger_name(table)
-      Table.new(table.to_s).trigger_name
+      Table.new(table).trigger_name
     end
 
     def column_cast(table, column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema || '.' || table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
-      data_type == "timestamp with time zone" ? "timestamptz" : "date"
+      Table.new(table).column_cast(column)
     end
 
     def sql_date(time, cast, add_cast = true)

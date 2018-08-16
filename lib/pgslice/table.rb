@@ -26,6 +26,11 @@ module PgSlice
       "#{table.split(".")[-1]}_insert_trigger"
     end
 
+    def column_cast(column)
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema || '.' || table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
+      data_type == "timestamp with time zone" ? "timestamptz" : "date"
+    end
+
     def columns
       execute("SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = $1", [table]).map{ |r| r["column_name"] }
     end
@@ -46,6 +51,10 @@ module PgSlice
           AND t.relname = $2
       SQL
       execute(query, table.split(".", 2))
+    end
+
+    def foreign_keys
+      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
 
     # http://stackoverflow.com/a/20537829
@@ -116,6 +125,14 @@ module PgSlice
 
     def quote_table(table)
       table.to_s.split(".", 2).map { |v| quote_ident(v) }.join(".")
+    end
+
+    def quote_no_schema(table)
+      quote_ident(table.to_s.split(".", 2)[-1])
+    end
+
+    def regclass(table)
+      "'#{quote_table(table)}'::regclass"
     end
 
     def sql_date(time, cast, add_cast = true)
