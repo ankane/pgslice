@@ -136,12 +136,12 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
     end
 
     def unprep
-      table = qualify_table(arguments.first)
-      intermediate_table = "#{table}_intermediate"
-      trigger_name = self.trigger_name(table)
+      table = Table.new(qualify_table(arguments.first))
+      intermediate_table = table.intermediate_table
+      trigger_name = table.trigger_name
 
       abort "Usage: pgslice unprep <table>" if arguments.length != 1
-      abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
+      abort "Table not found: #{intermediate_table}" unless intermediate_table.exists?
 
       queries = [
         "DROP TABLE #{quote_table(intermediate_table)} CASCADE;",
