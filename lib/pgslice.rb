@@ -60,10 +60,10 @@ module PgSlice
 
     def prep
       table, column, period = arguments
-      table = qualify_table(table)
-      intermediate_table = "#{table}_intermediate"
+      table = Table.new(qualify_table(table))
+      intermediate_table = table.intermediate_table
 
-      trigger_name = self.trigger_name(table)
+      trigger_name = table.trigger_name
 
       if options[:no_partition]
         abort "Usage: pgslice prep <table> --no-partition" if arguments.length != 1
@@ -71,11 +71,11 @@ module PgSlice
       else
         abort "Usage: pgslice prep <table> <column> <period>" if arguments.length != 3
       end
-      abort "Table not found: #{table}" unless table_exists?(table)
-      abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
+      abort "Table not found: #{table}" unless table.exists?
+      abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
 
       unless options[:no_partition]
-        abort "Column not found: #{column}" unless columns(table).include?(column)
+        abort "Column not found: #{column}" unless table.columns.include?(column)
         abort "Invalid period: #{period}" unless SQL_FORMAT[period.to_sym]
       end
 
