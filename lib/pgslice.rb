@@ -89,7 +89,7 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         SQL
 
         if server_version_num >= 110000
-          index_defs = execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+          index_defs = table.index_defs
           index_defs.each do |index_def|
             queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(intermediate_table)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
           end
@@ -539,14 +539,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       Table.new(table).existing_partitions(period)
     end
 
-    def has_trigger?(trigger_name, table)
-      !fetch_trigger(trigger_name, table).nil?
-    end
-
-    def fetch_comment(table)
-      execute("SELECT obj_description(#{regclass(table)}) AS comment")[0]
-    end
-
     # helpers
 
     def sql_date(time, cast, add_cast = true)
@@ -600,14 +592,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       quote_ident(table.to_s.split(".", 2)[-1])
     end
 
-    def regclass(table)
-      "'#{quote_table(table)}'::regclass"
-    end
-
-    def fetch_trigger(trigger_name, table)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(table)}", [trigger_name])[0]
-    end
-
     def qualify_table(table)
       table.to_s.include?(".") ? table : [schema, table].join(".")
     end
@@ -616,8 +600,8 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       trigger_name = original_table.trigger_name
 
       needs_comment = false
-      trigger_comment = fetch_trigger(trigger_name, table)
-      comment = trigger_comment || fetch_comment(table)
+      trigger_comment = table.fetch_trigger(trigger_name)
+      comment = trigger_comment || table.fetch_comment
       if comment
         field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
       end
@@ -641,10 +625,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       end
 
       [period, field, cast, needs_comment, !trigger_comment]
-    end
-
-    def foreign_keys(table)
-      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
   end
 end
