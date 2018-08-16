@@ -421,10 +421,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def analyze
+      abort "Usage: pgslice analyze <table>" if arguments.length != 1
+
       table = Table.new(qualify_table(arguments.first))
       parent_table = options[:swapped] ? table : table.intermediate_table
-
-      abort "Usage: pgslice analyze <table>" if arguments.length != 1
 
       existing_tables = table.existing_partitions
       analyze_list = existing_tables + [parent_table]
