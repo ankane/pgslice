@@ -151,12 +151,12 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
     end
 
     def add_partitions
-      original_table = qualify_table(arguments.first)
-      table = options[:intermediate] ? "#{original_table}_intermediate" : original_table
-      trigger_name = self.trigger_name(original_table)
+      original_table = Table.new(qualify_table(arguments.first))
+      table = options[:intermediate] ? original_table.intermediate_table : original_table
+      trigger_name = original_table.trigger_name
 
       abort "Usage: pgslice add_partitions <table>" if arguments.length != 1
-      abort "Table not found: #{table}" unless table_exists?(table)
+      abort "Table not found: #{table}" unless table.exists?
 
       future = options[:future]
       past = options[:past]
@@ -184,27 +184,27 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
         elsif options[:intermediate]
           original_table
         else
-          existing_partitions(original_table, period).last
+          Table.new(original_table.existing_partitions(period).last)
         end
 
       # indexes automatically propagate in Postgres 11+
       index_defs =
         if !declarative || server_version_num < 110000
-          execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(schema_table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+          schema_table.index_defs
         else
           []
         end
 
-      fk_defs = foreign_keys(schema_table)
-      primary_key = self.primary_key(schema_table)
+      fk_defs = schema_table.foreign_keys
+      primary_key = schema_table.primary_key
 
       added_partitions = []
       range.each do |n|
         day = advance_date(today, period, n)
 
-        partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
-        next if table_exists?(partition_name)
-        added_partitions << partition_name
+        partition_name = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
+        next if partition_name.exists?
+        added_partitions << partition_name.to_s
 
         if declarative
           queries << <<-SQL

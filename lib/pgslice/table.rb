@@ -108,6 +108,10 @@ module PgSlice
       existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t) }
     end
 
+    def index_defs
+      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+    end
+
     private
 
     def existing_tables(like:)
