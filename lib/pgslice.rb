@@ -4,6 +4,7 @@ require "slop"
 require "pg"
 
 # modules
+require "pgslice/generic_table"
 require "pgslice/table"
 require "pgslice/version"
 
