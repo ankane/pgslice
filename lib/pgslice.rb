@@ -1,7 +1,11 @@
-require "pgslice/version"
+# dependencies
+require "cgi"
 require "slop"
 require "pg"
-require "cgi"
+
+# modules
+require "pgslice/table"
+require "pgslice/version"
 
 module PgSlice
   class Error < StandardError; end
@@ -22,6 +26,8 @@ module PgSlice
     end
 
     def perform
+      $client = self
+
       return if @exit
 
       case @command
@@ -366,21 +372,21 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def swap
-      table = qualify_table(arguments.first)
-      intermediate_table = intermediate_name(table)
-      retired_table = retired_name(table)
+      table = Table.new(qualify_table(arguments.first))
+      intermediate_table = table.intermediate_table
+      retired_table = table.retired_table
 
       abort "Usage: pgslice swap <table>" if arguments.length != 1
-      abort "Table not found: #{table}" unless table_exists?(table)
-      abort "Table not found: #{intermediate_table}" unless table_exists?(intermediate_table)
-      abort "Table already exists: #{retired_table}" if table_exists?(retired_table)
+      abort "Table not found: #{table}" unless table.exists?
+      abort "Table not found: #{intermediate_table}" unless intermediate_table.exists?
+      abort "Table already exists: #{retired_table}" if retired_table.exists?
 
       queries = [
         "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(retired_table)};",
         "ALTER TABLE #{quote_table(intermediate_table)} RENAME TO #{quote_no_schema(table)};"
       ]
 
-      self.sequences(table).each do |sequence|
+      table.sequences.each do |sequence|
         queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_table(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
@@ -390,21 +396,21 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def unswap
-      table = qualify_table(arguments.first)
-      intermediate_table = intermediate_name(table)
-      retired_table = retired_name(table)
+      table = Table.new(qualify_table(arguments.first))
+      intermediate_table = table.intermediate_table
+      retired_table = table.retired_table
 
       abort "Usage: pgslice unswap <table>" if arguments.length != 1
-      abort "Table not found: #{table}" unless table_exists?(table)
-      abort "Table not found: #{retired_table}" unless table_exists?(retired_table)
-      abort "Table already exists: #{intermediate_table}" if table_exists?(intermediate_table)
+      abort "Table not found: #{table}" unless table.exists?
+      abort "Table not found: #{retired_table}" unless retired_table.exists?
+      abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
 
       queries = [
         "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(intermediate_table)};",
         "ALTER TABLE #{quote_table(retired_table)} RENAME TO #{quote_no_schema(table)};"
       ]
 
-      self.sequences(table).each do |sequence|
+      table.sequences.each do |sequence|
         queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_table(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
@@ -601,24 +607,6 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       execute("SELECT obj_description(#{regclass(table)}) AS comment")[0]
     end
 
-    # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
-    def sequences(table)
-      query = <<-SQL
-        SELECT
-          a.attname as related_column,
-          s.relname as sequence_name
-        FROM pg_class s
-          JOIN pg_depend d ON d.objid = s.oid
-          JOIN pg_class t ON d.objid = s.oid AND d.refobjid = t.oid
-          JOIN pg_attribute a ON (d.refobjid, d.refobjsubid) = (a.attrelid, a.attnum)
-          JOIN pg_namespace n ON n.oid = s.relnamespace
-        WHERE s.relkind = 'S'
-          AND n.nspname = $1
-          AND t.relname = $2
-      SQL
-      execute(query, table.split(".", 2))
-    end
-
     # helpers
 
     def trigger_name(table)
@@ -682,11 +670,11 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def quote_table(table)
-      table.split(".", 2).map { |v| quote_ident(v) }.join(".")
+      table.to_s.split(".", 2).map { |v| quote_ident(v) }.join(".")
     end
 
     def quote_no_schema(table)
-      quote_ident(table.split(".", 2)[-1])
+      quote_ident(table.to_s.split(".", 2)[-1])
     end
 
     def regclass(table)
