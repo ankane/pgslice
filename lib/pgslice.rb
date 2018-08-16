@@ -277,30 +277,30 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     end
 
     def fill
-      table = qualify_table(arguments.first)
+      table = Table.new(qualify_table(arguments.first))
 
       abort "Usage: pgslice fill <table>" if arguments.length != 1
 
-      source_table = options[:source_table]
-      dest_table = options[:dest_table]
+      source_table = Table.new(options[:source_table]) if options[:source_table]
+      dest_table = Table.new(options[:dest_table]) if options[:dest_table]
 
       if options[:swapped]
-        source_table ||= retired_name(table)
+        source_table ||= table.retired_table
         dest_table ||= table
       else
         source_table ||= table
-        dest_table ||= intermediate_name(table)
+        dest_table ||= table.intermediate_table
       end
 
-      abort "Table not found: #{source_table}" unless table_exists?(source_table)
-      abort "Table not found: #{dest_table}" unless table_exists?(dest_table)
+      abort "Table not found: #{source_table}" unless source_table.exists?
+      abort "Table not found: #{dest_table}" unless dest_table.exists?
 
       period, field, cast, _needs_comment, declarative = settings_from_trigger(table, dest_table)
 
       if period
         name_format = self.name_format(period)
 
-        existing_tables = existing_partitions(table, period)
+        existing_tables = table.existing_partitions(period)
         if existing_tables.any?
           starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
           ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
@@ -418,12 +418,12 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def analyze
-      table = qualify_table(arguments.first)
-      parent_table = options[:swapped] ? table : intermediate_name(table)
+      table = Table.new(qualify_table(arguments.first))
+      parent_table = options[:swapped] ? table : table.intermediate_table
 
       abort "Usage: pgslice analyze <table>" if arguments.length != 1
 
-      existing_tables = existing_partitions(table)
+      existing_tables = table.existing_partitions
       analyze_list = existing_tables + [parent_table]
       run_queries_without_transaction(analyze_list.map { |t| "ANALYZE VERBOSE #{quote_table(t)};" })
     end
@@ -536,30 +536,15 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def existing_partitions(table, period = nil)
-      count =
-        case period
-        when "day"
-          8
-        when "month"
-          6
-        else
-          "6,8"
-        end
-
-      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t) }
-    end
-
-    def existing_tables(like:)
-      query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2"
-      execute(query, like.split(".", 2)).map { |r| "#{r["schemaname"]}.#{r["tablename"]}" }.sort
+      Table.new(table).existing_partitions(period)
     end
 
     def table_exists?(table)
-      existing_tables(like: table).any?
+      Table.new(table).exists?
     end
 
     def columns(table)
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = $1", [table]).map{ |r| r["column_name"] }
+      Table.new(table).columns
     end
 
     # http://stackoverflow.com/a/20537829
@@ -610,15 +595,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     # helpers
 
     def trigger_name(table)
-      "#{table.split(".")[-1]}_insert_trigger"
-    end
-
-    def intermediate_name(table)
-      "#{table}_intermediate"
-    end
-
-    def retired_name(table)
-      "#{table}_retired"
+      Table.new(table.to_s).trigger_name
     end
 
     def column_cast(table, column)

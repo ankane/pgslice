@@ -22,6 +22,14 @@ module PgSlice
       existing_tables(like: table).any?
     end
 
+    def trigger_name
+      "#{table.split(".")[-1]}_insert_trigger"
+    end
+
+    def columns
+      execute("SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = $1", [table]).map{ |r| r["column_name"] }
+    end
+
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
     def sequences
       query = <<-SQL
@@ -38,6 +46,20 @@ module PgSlice
           AND t.relname = $2
       SQL
       execute(query, table.split(".", 2))
+    end
+
+    def existing_partitions(period = nil)
+      count =
+        case period
+        when "day"
+          8
+        when "month"
+          6
+        else
+          "6,8"
+        end
+
+      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t) }
     end
 
     private
