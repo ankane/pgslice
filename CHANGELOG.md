@@ -1,3 +1,7 @@
+## 0.4.3 [unreleased]
+
+- Fixed sequence ownership
+
 ## 0.4.2
 
 - Added support for Postgres 11 index improvements

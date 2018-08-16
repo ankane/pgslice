@@ -381,7 +381,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_ident(table)}.#{quote_ident(sequence["related_column"])};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_table(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
       queries.unshift("SET LOCAL lock_timeout = '#{options[:lock_timeout]}';") if server_version_num >= 90300
@@ -405,7 +405,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       ]
 
       self.sequences(table).each do |sequence|
-        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_ident(table)}.#{quote_ident(sequence["related_column"])};"
+        queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_table(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
       run_queries(queries)
@@ -616,7 +616,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
           AND n.nspname = $1
           AND t.relname = $2
       SQL
-      execute(query, [schema, table])
+      execute(query, table.split(".", 2))
     end
 
     # helpers
