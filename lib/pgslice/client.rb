@@ -2,8 +2,8 @@ module PgSlice
   class Client < Thor
     check_unknown_options!
 
-    class_option :url
-    class_option :dry_run, type: :boolean, default: false
+    class_option :url, desc: "Database URL"
+    class_option :dry_run, type: :boolean, default: false, desc: "Print statements without executing"
 
     map %w[--version -v] => :version
 
@@ -24,8 +24,8 @@ module PgSlice
     end
 
     desc "prep TABLE [COLUMN] [PERIOD]", "Create an intermediate table for partitioning"
-    option :partition, type: :boolean, default: true
-    option :trigger_based, type: :boolean, default: false
+    option :partition, type: :boolean, default: true, desc: "Partition the table"
+    option :trigger_based, type: :boolean, default: false, desc: "Use trigger-based partitioning"
     def prep(table, column=nil, period=nil)
       table = qualify_table(table)
       intermediate_table = table.intermediate_table
@@ -116,9 +116,9 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
     end
 
     desc "add_partitions TABLE", "Add partitions"
-    option :intermediate, type: :boolean, default: false
-    option :past, type: :numeric, default: 0
-    option :future, type: :numeric, default: 0
+    option :intermediate, type: :boolean, default: false, desc: "Add to intermediate table"
+    option :past, type: :numeric, default: 0, desc: "Number of past partitions to add"
+    option :future, type: :numeric, default: 0, desc: "Number of future partitions to add"
     def add_partitions(table)
       original_table = qualify_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
@@ -245,13 +245,13 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     end
 
     desc "fill TABLE", "Fill the partitions in batches"
-    option :batch_size, type: :numeric, default: 10000
-    option :swapped, type: :boolean, default: false
-    option :source_table
-    option :dest_table
-    option :start, type: :numeric
-    option :where
-    option :sleep, type: :numeric
+    option :batch_size, type: :numeric, default: 10000, desc: "Batch size"
+    option :swapped, type: :boolean, default: false, desc: "Use swapped table"
+    option :source_table, desc: "Source table"
+    option :dest_table, desc: "Destination table"
+    option :start, type: :numeric, desc: "Primary key to start"
+    option :where, desc: "Conditions to filter"
+    option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
     def fill(table)
       table = qualify_table(table)
       source_table = qualify_table(options[:source_table]) if options[:source_table]
@@ -345,7 +345,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     desc "swap TABLE", "Swap the intermediate table with the original table"
-    option :lock_timeout, default: "5s"
+    option :lock_timeout, default: "5s", desc: "Lock timeout"
     def swap(table)
       table = qualify_table(table)
       intermediate_table = table.intermediate_table
@@ -392,7 +392,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     desc "analyze TABLE", "Analyze tables"
-    option :swapped, type: :boolean, default: false
+    option :swapped, type: :boolean, default: false, desc: "Use swapped table"
     def analyze(table)
       table = qualify_table(table)
       parent_table = options[:swapped] ? table : table.intermediate_table
