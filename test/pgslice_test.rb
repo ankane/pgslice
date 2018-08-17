@@ -67,7 +67,7 @@ class PgSliceTest < Minitest::Test
   def run_command(command)
     puts "pgslice #{command}"
     puts
-    PgSlice::Client.new("#{command} --url #{$url}".split(" ")).perform
+    PgSlice::Client.start("#{command} --url #{$url}".split(" "))
     puts
   end
 

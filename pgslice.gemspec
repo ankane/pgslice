@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = ">= 2.2"
 
-  spec.add_dependency "slop", ">= 4.2.0"
+  spec.add_dependency "thor"
   spec.add_dependency "pg", ">= 0.18.2"
 
   spec.add_development_dependency "bundler"
