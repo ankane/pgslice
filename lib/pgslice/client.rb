@@ -27,7 +27,7 @@ module PgSlice
     option :partition, type: :boolean, default: true
     option :trigger_based, type: :boolean, default: false
     def prep(table, column=nil, period=nil)
-      table = Table.new(qualify_table(table))
+      table = qualify_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
 
@@ -102,7 +102,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
 
     desc "unprep TABLE", "Undo prep"
     def unprep(table)
-      table = Table.new(qualify_table(table))
+      table = qualify_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
 
@@ -120,7 +120,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
     option :past, type: :numeric, default: 0
     option :future, type: :numeric, default: 0
     def add_partitions(table)
-      original_table = Table.new(qualify_table(table))
+      original_table = qualify_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
       trigger_name = original_table.trigger_name
 
@@ -253,9 +253,9 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     option :where
     option :sleep, type: :numeric
     def fill(table)
-      table = Table.new(qualify_table(table))
-      source_table = Table.new(options[:source_table]) if options[:source_table]
-      dest_table = Table.new(options[:dest_table]) if options[:dest_table]
+      table = qualify_table(table)
+      source_table = qualify_table(options[:source_table]) if options[:source_table]
+      dest_table = qualify_table(options[:dest_table]) if options[:dest_table]
 
       if options[:swapped]
         source_table ||= table.retired_table
@@ -347,7 +347,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     desc "swap TABLE", "Swap the intermediate table with the original table"
     option :lock_timeout, default: "5s"
     def swap(table)
-      table = Table.new(qualify_table(table))
+      table = qualify_table(table)
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
@@ -371,7 +371,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     desc "unswap TABLE", "Undo swap"
     def unswap(table)
-      table = Table.new(qualify_table(table))
+      table = qualify_table(table)
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
@@ -394,7 +394,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     desc "analyze TABLE", "Analyze tables"
     option :swapped, type: :boolean, default: false
     def analyze(table)
-      table = Table.new(qualify_table(table))
+      table = qualify_table(table)
       parent_table = options[:swapped] ? table : table.intermediate_table
 
       existing_tables = table.existing_partitions
@@ -540,7 +540,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def qualify_table(table)
-      table.to_s.include?(".") ? table : [schema, table].join(".")
+      Table.new(table.to_s.include?(".") ? table : [schema, table].join("."))
     end
 
     def settings_from_trigger(original_table, table)
