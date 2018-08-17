@@ -42,6 +42,8 @@ module PgSlice
           8
         when "month"
           6
+        when "year"
+          4
         else
           "6,8"
         end

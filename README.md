@@ -32,7 +32,7 @@ This will give you the `pgslice` command.
   pgslice prep <table> <column> <period>
   ```
 
-  Period can be `day` or `month`.
+  Period can be `day`, `month`, or `year`.
 
   This creates a table named `<table>_intermediate` with the appropriate trigger for partitioning.
 
@@ -98,7 +98,7 @@ BEGIN;
 
 CREATE TABLE visits_intermediate (LIKE visits INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (created_at);
 
-COMMENT ON TABLE visits_intermediate is 'column:created_at,period:day';
+COMMENT ON TABLE visits_intermediate is 'column:created_at,period:month';
 
 COMMIT;
 
@@ -261,7 +261,7 @@ To add partitions, use:
 pgslice add_partitions <table> --future 3
 ```
 
-Add this as a cron job to create a new partition each day or month.
+Add this as a cron job to create a new partition each day, month, or year.
 
 ```sh
 # day
@@ -269,6 +269,9 @@ Add this as a cron job to create a new partition each day or month.
 
 # month
 0 0 1 * * pgslice add_partitions <table> --future 3 --url ...
+
+# year
+0 0 1 1 * pgslice add_partitions <table> --future 3 --url ...
 ```
 
 Add a monitor to ensure partitions are being created.
@@ -283,11 +286,12 @@ WHERE
     n.nspname = 'public' AND
     c.relname = '<table>_' || to_char(NOW() + INTERVAL '3 days', 'YYYYMMDD')
     -- for months, use to_char(NOW() + INTERVAL '3 months', 'YYYYMM')
+    -- for years, use to_char(NOW() + INTERVAL '3 years', 'YYYY')
 ```
 
 ## Archiving Partitions
 
-Back up and drop older partitions each day or month.
+Back up and drop older partitions each day, month, or year.
 
 ```sh
 pg_dump -c -Fc -t <table>_201609 $PGSLICE_URL > <table>_201609.dump
