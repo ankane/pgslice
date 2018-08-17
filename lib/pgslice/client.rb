@@ -13,7 +13,8 @@ module PgSlice
 
     SQL_FORMAT = {
       day: "YYYYMMDD",
-      month: "YYYYMM"
+      month: "YYYYMM",
+      year: "YYYY"
     }
 
     def initialize(*args)
@@ -502,8 +503,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       case period.to_sym
       when :day
         "%Y%m%d"
-      else
+      when :month
         "%Y%m"
+      else
+        "%Y"
       end
     end
 
@@ -512,8 +515,9 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       case period.to_sym
       when :day
         date
-      else
+      when :month
         Date.new(date.year, date.month)
+      else Date.new(date.year)
       end
     end
 
@@ -522,8 +526,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       case period.to_sym
       when :day
         date.next_day(count)
-      else
+      when :month
         date.next_month(count)
+      else
+        date.next_year(count)
       end
     end
 
