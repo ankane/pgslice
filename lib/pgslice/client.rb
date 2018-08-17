@@ -1,5 +1,7 @@
 module PgSlice
   class Client < Thor
+    check_unknown_options!
+
     class_option :url
     class_option :dry_run, type: :boolean, default: false
 
@@ -410,11 +412,11 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     # output
 
     def log(message = nil)
-      $stderr.puts message
+      error message
     end
 
     def log_sql(message = nil)
-      $stdout.puts message
+      say message
     end
 
     def abort(message)
