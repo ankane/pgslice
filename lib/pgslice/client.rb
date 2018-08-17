@@ -249,7 +249,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     option :swapped, type: :boolean, default: false
     option :source_table
     option :dest_table
-    option :start
+    option :start, type: :numeric
     option :where
     option :sleep, type: :numeric
     def fill(table)
