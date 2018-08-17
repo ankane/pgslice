@@ -1,6 +1,7 @@
 ## 0.4.3 [unreleased]
 
 - Fixed sequence ownership
+- Improved help
 
 ## 0.4.2
 
