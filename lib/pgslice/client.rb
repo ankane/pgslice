@@ -517,7 +517,8 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
         date
       when :month
         Date.new(date.year, date.month)
-      else Date.new(date.year)
+      else
+        Date.new(date.year)
       end
     end
 
