@@ -1,3 +1,7 @@
+## 0.4.4 [unreleased]
+
+- Fixed `--source-table` and `--dest-table` options
+
 ## 0.4.3
 
 - Fixed sequence ownership
