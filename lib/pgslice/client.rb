@@ -555,7 +555,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
       unless period
         needs_comment = true
-        function_def = execute("select pg_get_functiondef(oid) from pg_proc where proname = $1", [trigger_name])[0]
+        function_def = execute("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = $1", [trigger_name])[0]
         return [] unless function_def
         function_def = function_def["pg_get_functiondef"]
         sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
