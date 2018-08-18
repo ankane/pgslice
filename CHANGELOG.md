@@ -1,4 +1,4 @@
-## 0.4.4 [unreleased]
+## 0.4.4
 
 - Added partitioning by `year`
 - Fixed `--source-table` and `--dest-table` options
