@@ -51,7 +51,7 @@ module PgSlice
 
       if declarative && options[:partition]
         queries << <<-SQL
-CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_table(column)});
+CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
 
         if server_version_num >= 110000
@@ -153,7 +153,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
         elsif options[:intermediate]
           original_table
         else
-          Table.new(original_table.existing_partitions(period).last)
+          original_table.existing_partitions(period).last
         end
 
       # indexes automatically propagate in Postgres 11+
@@ -171,7 +171,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       range.each do |n|
         day = advance_date(today, period, n)
 
-        partition = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
+        partition = Table.new(original_table.schema, "#{original_table.name}_#{day.strftime(name_format(period))}")
         next if partition.exists?
         added_partitions << partition
 
@@ -205,11 +205,11 @@ CREATE TABLE #{quote_table(partition)}
         past_defs = []
         name_format = self.name_format(period)
         existing_tables = original_table.existing_partitions(period)
-        existing_tables = (existing_tables + added_partitions).uniq(&:table).sort_by(&:table)
+        existing_tables = (existing_tables + added_partitions).uniq(&:name).sort_by(&:name)
 
         existing_tables.each do |existing_table|
-          day = DateTime.strptime(existing_table.table.split("_").last, name_format)
-          partition = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
+          day = DateTime.strptime(existing_table.name.split("_").last, name_format)
+          partition = Table.new(original_table.schema, "#{original_table.name}_#{day.strftime(name_format(period))}")
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
               INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
@@ -276,8 +276,8 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
 
         existing_tables = table.existing_partitions(period)
         if existing_tables.any?
-          starting_time = DateTime.strptime(existing_tables.first.table.split("_").last, name_format)
-          ending_time = advance_date(DateTime.strptime(existing_tables.last.table.split("_").last, name_format), period, 1)
+          starting_time = DateTime.strptime(existing_tables.first.name.split("_").last, name_format)
+          ending_time = advance_date(DateTime.strptime(existing_tables.last.name.split("_").last, name_format), period, 1)
         end
       end
 
@@ -539,15 +539,20 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     end
 
     def quote_table(table)
-      table.to_s.split(".", 2).map { |v| quote_ident(v) }.join(".")
+      table.quote_table
     end
 
     def quote_no_schema(table)
-      quote_ident(table.to_s.split(".", 2)[-1])
+      quote_ident(table.name)
     end
 
-    def create_table(table)
-      Table.new(table.to_s.include?(".") ? table : [schema, table].join("."))
+    def create_table(name)
+      if name.include?(".")
+        schema, name = name.split(".", 2)
+      else
+        schema = self.schema
+      end
+      Table.new(schema, name)
     end
 
     def settings_from_trigger(original_table, table)

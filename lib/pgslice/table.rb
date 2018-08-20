@@ -1,24 +1,24 @@
 module PgSlice
   class Table < GenericTable
     def intermediate_table
-      self.class.new("#{table}_intermediate")
+      self.class.new(schema, "#{name}_intermediate")
     end
 
     def retired_table
-      self.class.new("#{table}_retired")
+      self.class.new(schema, "#{name}_retired")
     end
 
     def trigger_name
-      "#{table.split(".")[-1]}_insert_trigger"
+      "#{name}_insert_trigger"
     end
 
     def column_cast(column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema || '.' || table_name = $1 AND column_name = $2", [table, column])[0]["data_type"]
+      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, name, column])[0]["data_type"]
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
     end
 
     def max_id(primary_key, below: nil, where: nil)
-      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
+      query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table}"
       conditions = []
       conditions << "#{quote_ident(primary_key)} <= #{below}" if below
       conditions << where if where
@@ -27,7 +27,7 @@ module PgSlice
     end
 
     def min_id(primary_key, column, cast, starting_time, where)
-      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_table(table)}"
+      query = "SELECT MIN(#{quote_ident(primary_key)}) FROM #{quote_table}"
       conditions = []
       conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
       conditions << where if where
@@ -48,15 +48,15 @@ module PgSlice
           "6,8"
         end
 
-      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t.table) }
+      existing_tables(schema, like: "#{name}_%").select { |t| /\A#{Regexp.escape("#{name}_")}\d{#{count}}\z/.match(t.name) }
     end
 
     def fetch_comment
-      execute("SELECT obj_description(#{regclass(table)}) AS comment")[0]
+      execute("SELECT obj_description(#{regclass}) AS comment")[0]
     end
 
     def fetch_trigger(trigger_name)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass(table)}", [trigger_name])[0]
+      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass}", [trigger_name])[0]
     end
 
     protected

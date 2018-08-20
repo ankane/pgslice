@@ -1,21 +1,22 @@
 module PgSlice
   class GenericTable
-    attr_reader :table
+    attr_reader :schema, :name
 
-    def initialize(table)
-      @table = table.to_s
+    def initialize(schema, name)
+      @schema = schema
+      @name = name
     end
 
     def to_s
-      table
+      [schema, name].join(".")
     end
 
     def exists?
-      existing_tables(like: table).any?
+      existing_tables(schema, like: name).any?
     end
 
     def columns
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = $1", [table]).map{ |r| r["column_name"] }
+      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2", [schema, name]).map{ |r| r["column_name"] }
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
@@ -33,11 +34,11 @@ module PgSlice
           AND n.nspname = $1
           AND t.relname = $2
       SQL
-      execute(query, table.split(".", 2))
+      execute(query, [schema, name])
     end
 
     def foreign_keys
-      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass(table)} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
+      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
 
     # http://stackoverflow.com/a/20537829
@@ -49,25 +50,30 @@ module PgSlice
         FROM
           pg_index, pg_class, pg_attribute, pg_namespace
         WHERE
-          nspname || '.' || relname = $1 AND
+          nspname = $1 AND
+          relname = $2 AND
           indrelid = pg_class.oid AND
           pg_class.relnamespace = pg_namespace.oid AND
           pg_attribute.attrelid = pg_class.oid AND
           pg_attribute.attnum = any(pg_index.indkey) AND
           indisprimary
       SQL
-      execute(query, [table]).map { |r| r["attname"] }
+      execute(query, [schema, name]).map { |r| r["attname"] }
     end
 
     def index_defs
-      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass(table)} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+    end
+
+    def quote_table
+      [quote_ident(schema), quote_ident(name)].join(".")
     end
 
     protected
 
-    def existing_tables(like:)
+    def existing_tables(schema, like:)
       query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2 ORDER BY 1, 2"
-      execute(query, like.split(".", 2)).map { |r| Table.new("#{r["schemaname"]}.#{r["tablename"]}") }
+      execute(query, [schema, like]).map { |r| Table.new(r["schemaname"], r["tablename"]) }
     end
 
     def execute(*args)
@@ -78,12 +84,8 @@ module PgSlice
       PG::Connection.quote_ident(value)
     end
 
-    def quote_table(table)
-      table.to_s.split(".", 2).map { |v| quote_ident(v) }.join(".")
-    end
-
-    def regclass(table)
-      "'#{quote_table(table)}'::regclass"
+    def regclass
+      "'#{quote_table}'::regclass"
     end
   end
 end
