@@ -1,7 +1,8 @@
 # dependencies
 require "cgi"
-require "thor"
 require "pg"
+require "thor"
+require "time"
 
 # modules
 require "pgslice/client"

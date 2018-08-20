@@ -145,7 +145,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       end
 
       # today = utc date
-      today = round_date(DateTime.now.new_offset(0).to_date, period)
+      today = round_date(Time.now.utc.to_date, period)
 
       schema_table =
         if !declarative
