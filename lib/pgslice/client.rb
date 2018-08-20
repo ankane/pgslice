@@ -28,7 +28,7 @@ module PgSlice
     option :partition, type: :boolean, default: true, desc: "Partition the table"
     option :trigger_based, type: :boolean, default: false, desc: "Use trigger-based partitioning"
     def prep(table, column=nil, period=nil)
-      table = qualify_table(table)
+      table = create_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
 
@@ -103,7 +103,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
 
     desc "unprep TABLE", "Undo prep"
     def unprep(table)
-      table = qualify_table(table)
+      table = create_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
 
@@ -121,7 +121,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
     option :past, type: :numeric, default: 0, desc: "Number of past partitions to add"
     option :future, type: :numeric, default: 0, desc: "Number of future partitions to add"
     def add_partitions(table)
-      original_table = qualify_table(table)
+      original_table = create_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
       trigger_name = original_table.trigger_name
 
@@ -254,9 +254,9 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
     option :where, desc: "Conditions to filter"
     option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
     def fill(table)
-      table = qualify_table(table)
-      source_table = qualify_table(options[:source_table]) if options[:source_table]
-      dest_table = qualify_table(options[:dest_table]) if options[:dest_table]
+      table = create_table(table)
+      source_table = create_table(options[:source_table]) if options[:source_table]
+      dest_table = create_table(options[:dest_table]) if options[:dest_table]
 
       if options[:swapped]
         source_table ||= table.retired_table
@@ -348,7 +348,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     desc "swap TABLE", "Swap the intermediate table with the original table"
     option :lock_timeout, default: "5s", desc: "Lock timeout"
     def swap(table)
-      table = qualify_table(table)
+      table = create_table(table)
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
@@ -372,7 +372,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     desc "unswap TABLE", "Undo swap"
     def unswap(table)
-      table = qualify_table(table)
+      table = create_table(table)
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
@@ -395,7 +395,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
     desc "analyze TABLE", "Analyze tables"
     option :swapped, type: :boolean, default: false, desc: "Use swapped table"
     def analyze(table)
-      table = qualify_table(table)
+      table = create_table(table)
       parent_table = options[:swapped] ? table : table.intermediate_table
 
       existing_tables = table.existing_partitions
@@ -546,7 +546,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       quote_ident(table.to_s.split(".", 2)[-1])
     end
 
-    def qualify_table(table)
+    def create_table(table)
       Table.new(table.to_s.include?(".") ? table : [schema, table].join("."))
     end
 
