@@ -66,8 +66,8 @@ module PgSlice
     protected
 
     def existing_tables(like:)
-      query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2"
-      execute(query, like.split(".", 2)).map { |r| "#{r["schemaname"]}.#{r["tablename"]}" }.sort
+      query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2 ORDER BY 1, 2"
+      execute(query, like.split(".", 2)).map { |r| Table.new("#{r["schemaname"]}.#{r["tablename"]}") }
     end
 
     def execute(*args)

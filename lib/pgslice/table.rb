@@ -48,7 +48,7 @@ module PgSlice
           "6,8"
         end
 
-      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t) }
+      existing_tables(like: "#{table}_%").select { |t| /\A#{Regexp.escape("#{table}_")}\d{#{count}}\z/.match(t.table) }
     end
 
     def fetch_comment

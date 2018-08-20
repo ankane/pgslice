@@ -171,30 +171,30 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       range.each do |n|
         day = advance_date(today, period, n)
 
-        partition_name = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
-        next if partition_name.exists?
-        added_partitions << partition_name.to_s
+        partition = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
+        next if partition.exists?
+        added_partitions << partition
 
         if declarative
           queries << <<-SQL
-CREATE TABLE #{quote_table(partition_name)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)});
+CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)});
           SQL
         else
           queries << <<-SQL
-CREATE TABLE #{quote_table(partition_name)}
+CREATE TABLE #{quote_table(partition)}
     (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
     INHERITS (#{quote_table(table)});
           SQL
         end
 
-        queries << "ALTER TABLE #{quote_table(partition_name)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
+        queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
 
         index_defs.each do |index_def|
-          queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(partition_name)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+          queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(partition)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
         end
 
         fk_defs.each do |fk_def|
-          queries << "ALTER TABLE #{quote_table(partition_name)} ADD #{fk_def};"
+          queries << "ALTER TABLE #{quote_table(partition)} ADD #{fk_def};"
         end
       end
 
@@ -205,14 +205,14 @@ CREATE TABLE #{quote_table(partition_name)}
         past_defs = []
         name_format = self.name_format(period)
         existing_tables = original_table.existing_partitions(period)
-        existing_tables = (existing_tables + added_partitions).uniq.sort
+        existing_tables = (existing_tables + added_partitions).uniq(&:table).sort_by(&:table)
 
         existing_tables.each do |existing_table|
-          day = DateTime.strptime(existing_table.split("_").last, name_format)
-          partition_name = "#{original_table}_#{day.strftime(name_format(period))}"
+          day = DateTime.strptime(existing_table.table.split("_").last, name_format)
+          partition = Table.new("#{original_table}_#{day.strftime(name_format(period))}")
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-              INSERT INTO #{quote_table(partition_name)} VALUES (NEW.*);"
+              INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
 
           if day.to_date < today
             past_defs << sql
@@ -276,12 +276,12 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
 
         existing_tables = table.existing_partitions(period)
         if existing_tables.any?
-          starting_time = DateTime.strptime(existing_tables.first.split("_").last, name_format)
-          ending_time = advance_date(DateTime.strptime(existing_tables.last.split("_").last, name_format), period, 1)
+          starting_time = DateTime.strptime(existing_tables.first.table.split("_").last, name_format)
+          ending_time = advance_date(DateTime.strptime(existing_tables.last.table.split("_").last, name_format), period, 1)
         end
       end
 
-      schema_table = period && declarative ? Table.new(existing_tables.last) : table
+      schema_table = period && declarative ? existing_tables.last : table
 
       primary_key = schema_table.primary_key[0]
       abort "No primary key" unless primary_key
