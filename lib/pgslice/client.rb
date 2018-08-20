@@ -36,7 +36,7 @@ module PgSlice
         abort "Usage: \"pgslice prep TABLE --no-partition\"" if column || period
         abort "Can't use --trigger-based and --no-partition" if options[:trigger_based]
       end
-      abort "Table not found: #{table}" unless table.exists?
+      assert_table(table)
       abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
 
       if options[:partition]
@@ -107,7 +107,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
 
-      abort "Table not found: #{intermediate_table}" unless intermediate_table.exists?
+      assert_table(intermediate_table)
 
       queries = [
         "DROP TABLE #{quote_table(intermediate_table)} CASCADE;",
@@ -125,7 +125,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       table = options[:intermediate] ? original_table.intermediate_table : original_table
       trigger_name = original_table.trigger_name
 
-      abort "Table not found: #{table}" unless table.exists?
+      assert_table(table)
 
       future = options[:future]
       past = options[:past]
@@ -266,8 +266,8 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
         dest_table ||= table.intermediate_table
       end
 
-      abort "Table not found: #{source_table}" unless source_table.exists?
-      abort "Table not found: #{dest_table}" unless dest_table.exists?
+      assert_table(source_table)
+      assert_table(dest_table)
 
       period, field, cast, _needs_comment, declarative = settings_from_trigger(table, dest_table)
 
@@ -352,8 +352,8 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
-      abort "Table not found: #{table}" unless table.exists?
-      abort "Table not found: #{intermediate_table}" unless intermediate_table.exists?
+      assert_table(table)
+      assert_table(intermediate_table)
       abort "Table already exists: #{retired_table}" if retired_table.exists?
 
       queries = [
@@ -376,8 +376,8 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       intermediate_table = table.intermediate_table
       retired_table = table.retired_table
 
-      abort "Table not found: #{table}" unless table.exists?
-      abort "Table not found: #{retired_table}" unless retired_table.exists?
+      assert_table(table)
+      assert_table(retired_table)
       abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
 
       queries = [
@@ -520,6 +520,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       else
         Date.new(date.year)
       end
+    end
+
+    def assert_table(table)
+      abort "Table not found: #{table}" unless table.exists?
     end
 
     def advance_date(date, period, count = 1)
