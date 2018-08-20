@@ -37,7 +37,7 @@ module PgSlice
         abort "Can't use --trigger-based and --no-partition" if options[:trigger_based]
       end
       assert_table(table)
-      abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
+      assert_no_table(intermediate_table)
 
       if options[:partition]
         abort "Usage: \"pgslice prep TABLE COLUMN PERIOD\"" if !(column && period)
@@ -354,7 +354,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
       assert_table(table)
       assert_table(intermediate_table)
-      abort "Table already exists: #{retired_table}" if retired_table.exists?
+      assert_no_table(retired_table)
 
       queries = [
         "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(retired_table)};",
@@ -378,7 +378,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
       assert_table(table)
       assert_table(retired_table)
-      abort "Table already exists: #{intermediate_table}" if intermediate_table.exists?
+      assert_no_table(intermediate_table)
 
       queries = [
         "ALTER TABLE #{quote_table(table)} RENAME TO #{quote_no_schema(intermediate_table)};",
@@ -524,6 +524,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     def assert_table(table)
       abort "Table not found: #{table}" unless table.exists?
+    end
+
+    def assert_no_table(table)
+      abort "Table already exists: #{table}" if table.exists?
     end
 
     def advance_date(date, period, count = 1)
