@@ -131,7 +131,7 @@ COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_ta
       past = options[:past]
       range = (-1 * past)..future
 
-      period, field, cast, needs_comment, declarative = settings_from_trigger(original_table, table)
+      period, field, cast, needs_comment, declarative = fetch_settings(original_table, table)
       unless period
         message = "No settings found: #{table}"
         message = "#{message}\nDid you mean to use --intermediate?" unless options[:intermediate]
@@ -269,7 +269,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
       assert_table(source_table)
       assert_table(dest_table)
 
-      period, field, cast, _needs_comment, declarative = settings_from_trigger(table, dest_table)
+      period, field, cast, _needs_comment, declarative = fetch_settings(table, dest_table)
 
       if period
         name_format = self.name_format(period)
@@ -563,7 +563,7 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
       Table.new(schema, name)
     end
 
-    def settings_from_trigger(original_table, table)
+    def fetch_settings(original_table, table)
       trigger_name = original_table.trigger_name
 
       needs_comment = false
