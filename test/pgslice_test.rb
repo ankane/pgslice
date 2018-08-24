@@ -94,7 +94,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def assert_column(table, column)
-    assert $conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first.key?(column), "Missing column #{column} on #{table}"
+    assert ($conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first || {}).key?(column), "Missing column #{column} on #{table}"
   end
 
   def assert_foreign_key(table_name)
