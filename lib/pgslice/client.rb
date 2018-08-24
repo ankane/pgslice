@@ -72,7 +72,7 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         SQL
 
         table.foreign_keys.each do |fk_def|
-          queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD #{fk_def};"
+          queries << make_fk_def(fk_def, intermediate_table)
         end
       end
 
@@ -194,7 +194,7 @@ CREATE TABLE #{quote_table(partition)}
         end
 
         fk_defs.each do |fk_def|
-          queries << "ALTER TABLE #{quote_table(partition)} ADD #{fk_def};"
+          queries << make_fk_def(fk_def, partition)
         end
       end
 
@@ -565,6 +565,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
 
     def make_index_def(index_def, table)
       index_def.sub(/ ON \S+ USING /, " ON #{quote_table(table)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+    end
+
+    def make_fk_def(fk_def, table)
+      "ALTER TABLE #{quote_table(table)} ADD #{fk_def};"
     end
 
     def fetch_settings(original_table, table)
