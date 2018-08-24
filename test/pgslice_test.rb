@@ -58,7 +58,7 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
 
     # test insert works
-    insert_result = $conn.exec('INSERT INTO "Posts" ("createdAt") VALUES (NOW()) RETURNING "Id"').first
+    insert_result = $conn.exec('INSERT INTO "Posts" ("createdAt") VALUES (\'' + Time.now.utc.iso8601 + '\') RETURNING "Id"').first
     if server_version_num >= 100000 && !trigger_based
       assert insert_result["Id"]
     else
