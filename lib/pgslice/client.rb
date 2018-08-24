@@ -57,7 +57,7 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         if server_version_num >= 110000
           index_defs = table.index_defs
           index_defs.each do |index_def|
-            queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(intermediate_table)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+            queries << make_index_def(index_def, intermediate_table)
           end
         end
 
@@ -190,7 +190,7 @@ CREATE TABLE #{quote_table(partition)}
         queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
 
         index_defs.each do |index_def|
-          queries << index_def.sub(/ ON \S+ USING /, " ON #{quote_table(partition)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
+          queries << make_index_def(index_def, partition)
         end
 
         fk_defs.each do |fk_def|
@@ -561,6 +561,10 @@ INSERT INTO #{quote_table(dest_table)} (#{fields})
         schema = self.schema
       end
       Table.new(schema, name)
+    end
+
+    def make_index_def(index_def, table)
+      index_def.sub(/ ON \S+ USING /, " ON #{quote_table(table)} USING ").sub(/ INDEX .+ ON /, " INDEX ON ") + ";"
     end
 
     def fetch_settings(original_table, table)
