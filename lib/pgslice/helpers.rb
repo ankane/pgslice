@@ -1,5 +1,11 @@
 module PgSlice
   module Helpers
+    SQL_FORMAT = {
+      day: "YYYYMMDD",
+      month: "YYYYMM",
+      year: "YYYY"
+    }
+
     protected
 
     # output

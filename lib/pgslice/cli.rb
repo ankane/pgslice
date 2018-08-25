@@ -13,12 +13,6 @@ module PgSlice
       true
     end
 
-    SQL_FORMAT = {
-      day: "YYYYMMDD",
-      month: "YYYYMM",
-      year: "YYYY"
-    }
-
     def initialize(*args)
       $client = self
       $stdout.sync = true
