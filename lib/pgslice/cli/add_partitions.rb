@@ -37,7 +37,7 @@ module PgSlice
         elsif options[:intermediate]
           original_table
         else
-          original_table.partitions(period).last
+          table.partitions.last
         end
 
       # indexes automatically propagate in Postgres 11+
@@ -88,7 +88,7 @@ CREATE TABLE #{quote_table(partition)}
         future_defs = []
         past_defs = []
         name_format = self.name_format(period)
-        partitions = (original_table.partitions(period) + added_partitions).uniq(&:name).sort_by(&:name)
+        partitions = (table.partitions + added_partitions).uniq(&:name).sort_by(&:name)
 
         partitions.each do |partition|
           day = partition_date(partition, name_format)

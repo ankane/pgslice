@@ -29,7 +29,7 @@ module PgSlice
       if period
         name_format = self.name_format(period)
 
-        partitions = table.partitions(period)
+        partitions = dest_table.partitions
         if partitions.any?
           starting_time = partition_date(partitions.first, name_format)
           ending_time = advance_date(partition_date(partitions.last, name_format), period, 1)

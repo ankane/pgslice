@@ -104,18 +104,21 @@ module PgSlice
       (execute(query)[0]["min"] || 1).to_i
     end
 
-    def partitions(period)
-      count =
-        case period
-        when "day"
-          8
-        when "month"
-          6
-        else
-          4
-        end
-
-      existing_tables(like: "#{name}_%").select { |t| /\A#{Regexp.escape("#{name}_")}\d{#{count}}\z/.match(t.name) }
+    def partitions
+      query = <<-SQL
+        SELECT
+          nmsp_child.nspname  AS schema,
+          child.relname       AS name
+        FROM pg_inherits
+          JOIN pg_class parent            ON pg_inherits.inhparent = parent.oid
+          JOIN pg_class child             ON pg_inherits.inhrelid   = child.oid
+          JOIN pg_namespace nmsp_parent   ON nmsp_parent.oid  = parent.relnamespace
+          JOIN pg_namespace nmsp_child    ON nmsp_child.oid   = child.relnamespace
+        WHERE
+          nmsp_parent.nspname = $1 AND
+          parent.relname = $2
+      SQL
+      execute(query, [schema, name]).map { |r| Table.new(r["schema"], r["name"]) }
     end
 
     def fetch_comment
