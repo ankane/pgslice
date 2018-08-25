@@ -12,7 +12,7 @@ module PgSlice
     end
 
     def exists?
-      existing_tables(like: name).any?
+      execute("SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename = $2", [schema, name]).first["count"].to_i > 0
     end
 
     def columns
@@ -130,11 +130,6 @@ module PgSlice
     end
 
     protected
-
-    def existing_tables(like:)
-      query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2 ORDER BY 1, 2"
-      execute(query, [schema, like]).map { |r| Table.new(r["schemaname"], r["tablename"]) }
-    end
 
     def execute(*args)
       PgSlice::CLI.instance.send(:execute, *args)
