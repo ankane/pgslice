@@ -77,6 +77,7 @@ class PgSliceTest < Minitest::Test
     assert_column "Posts", "updatedAt"
     assert_column partition_name, "updatedAt"
 
+    run_command "analyze Posts --swapped"
     run_command "unswap Posts"
     run_command "unprep Posts"
     assert true

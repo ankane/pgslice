@@ -104,17 +104,15 @@ module PgSlice
       (execute(query)[0]["min"] || 1).to_i
     end
 
-    def partitions(period = nil)
+    def partitions(period)
       count =
         case period
         when "day"
           8
         when "month"
           6
-        when "year"
-          4
         else
-          "6,8"
+          4
         end
 
       existing_tables(like: "#{name}_%").select { |t| /\A#{Regexp.escape("#{name}_")}\d{#{count}}\z/.match(t.name) }
