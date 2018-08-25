@@ -2,7 +2,7 @@
 
 require "pgslice"
 begin
-  PgSlice::Client.start
+  PgSlice::CLI.start
 rescue Interrupt
   abort
 end
