@@ -13,6 +13,14 @@ class PgSliceTest < Minitest::Test
     assert_period "year"
   end
 
+  def test_date
+    assert_period "year", column: "createdAt"
+  end
+
+  def test_timestamptz
+    assert_period "year", column: "createdAtTz"
+  end
+
   def test_no_partition
     run_command "prep Posts --no-partition"
     run_command "fill Posts"
@@ -26,12 +34,16 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true
   end
 
+  def test_trigger_based_timestamptz
+    assert_period "month", trigger_based: true, column: "createdAtTz"
+  end
+
   private
 
-  def assert_period(period, trigger_based: false)
-    run_command "prep Posts createdAt #{period} #{"--trigger-based" if trigger_based}"
+  def assert_period(period, column: "createdAt", trigger_based: false)
+    run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
-    now = Time.now
+    now = Time.now.utc
     time_format = case period
       when "day"
         "%Y%m%d"
@@ -58,7 +70,7 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
 
     # test insert works
-    insert_result = $conn.exec('INSERT INTO "Posts" ("createdAt") VALUES (\'' + Time.now.utc.iso8601 + '\') RETURNING "Id"').first
+    insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
     if server_version_num >= 100000 && !trigger_based
       assert insert_result["Id"]
     else
