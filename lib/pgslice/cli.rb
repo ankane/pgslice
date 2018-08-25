@@ -1,5 +1,9 @@
 module PgSlice
   class CLI < Thor
+    class << self
+      attr_accessor :instance
+    end
+
     include Helpers
 
     check_unknown_options!
@@ -14,7 +18,7 @@ module PgSlice
     end
 
     def initialize(*args)
-      $client = self
+      PgSlice::CLI.instance = self
       $stdout.sync = true
       $stderr.sync = true
       super

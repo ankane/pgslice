@@ -136,7 +136,7 @@ module PgSlice
     end
 
     def execute(*args)
-      $client.send(:execute, *args)
+      PgSlice::CLI.instance.send(:execute, *args)
     end
 
     def quote_ident(value)
