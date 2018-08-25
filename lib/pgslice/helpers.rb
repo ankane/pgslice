@@ -172,36 +172,5 @@ module PgSlice
     def make_fk_def(fk_def, table)
       "ALTER TABLE #{quote_table(table)} ADD #{fk_def};"
     end
-
-    def fetch_settings(original_table, table)
-      trigger_name = original_table.trigger_name
-
-      needs_comment = false
-      trigger_comment = table.fetch_trigger(trigger_name)
-      comment = trigger_comment || table.fetch_comment
-      if comment
-        field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
-      end
-
-      unless period
-        needs_comment = true
-        function_def = execute("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = $1", [trigger_name])[0]
-        return [] unless function_def
-        function_def = function_def["pg_get_functiondef"]
-        sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
-        return [] unless sql_format
-        period = sql_format[0]
-        field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
-      end
-
-      # backwards compatibility with 0.2.3 and earlier (pre-timestamptz support)
-      unless cast
-        cast = "date"
-        # update comment to explicitly define cast
-        needs_comment = true
-      end
-
-      [period, field, cast, needs_comment, !trigger_comment]
-    end
   end
 end

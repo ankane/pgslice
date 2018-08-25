@@ -129,6 +129,37 @@ module PgSlice
       execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass}", [trigger_name])[0]
     end
 
+    # legacy
+    def fetch_settings(trigger_name)
+      needs_comment = false
+      trigger_comment = fetch_trigger(trigger_name)
+      comment = trigger_comment || fetch_comment
+      if comment
+        field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
+      end
+
+      unless period
+        needs_comment = true
+        function_def = execute("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = $1", [trigger_name])[0]
+        return [] unless function_def
+        function_def = function_def["pg_get_functiondef"]
+        sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
+        return [] unless sql_format
+        period = sql_format[0]
+        field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
+      end
+
+      # backwards compatibility with 0.2.3 and earlier (pre-timestamptz support)
+      unless cast
+        cast = "date"
+        # update comment to explicitly define cast
+        needs_comment = true
+      end
+
+      declarative = !trigger_comment
+      [period, field, cast, needs_comment, declarative]
+    end
+
     protected
 
     def execute(*args)

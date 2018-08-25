@@ -24,7 +24,7 @@ module PgSlice
       assert_table(source_table)
       assert_table(dest_table)
 
-      period, field, cast, _needs_comment, declarative = fetch_settings(table, dest_table)
+      period, field, cast, _, declarative = dest_table.fetch_settings(table.trigger_name)
 
       if period
         name_format = self.name_format(period)

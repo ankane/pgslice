@@ -15,7 +15,7 @@ module PgSlice
       past = options[:past]
       range = (-1 * past)..future
 
-      period, field, cast, needs_comment, declarative = fetch_settings(original_table, table)
+      period, field, cast, needs_comment, declarative = table.fetch_settings(original_table.trigger_name)
       unless period
         message = "No settings found: #{table}"
         message = "#{message}\nDid you mean to use --intermediate?" unless options[:intermediate]
