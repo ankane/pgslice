@@ -5,6 +5,7 @@ require "thor"
 require "time"
 
 # modules
+require "pgslice/helpers"
 require "pgslice/table"
 require "pgslice/version"
 
