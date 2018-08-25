@@ -29,14 +29,14 @@ module PgSlice
       if period
         name_format = self.name_format(period)
 
-        existing_tables = table.existing_partitions(period)
-        if existing_tables.any?
-          starting_time = DateTime.strptime(existing_tables.first.name.split("_").last, name_format)
-          ending_time = advance_date(DateTime.strptime(existing_tables.last.name.split("_").last, name_format), period, 1)
+        existing_partitions = table.existing_partitions(period)
+        if existing_partitions.any?
+          starting_time = partition_date(existing_partitions.first, name_format)
+          ending_time = advance_date(partition_date(existing_partitions.last, name_format), period, 1)
         end
       end
 
-      schema_table = period && declarative ? existing_tables.last : table
+      schema_table = period && declarative ? existing_partitions.last : table
 
       primary_key = schema_table.primary_key[0]
       abort "No primary key" unless primary_key

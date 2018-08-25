@@ -131,6 +131,10 @@ module PgSlice
       end
     end
 
+    def partition_date(partition, name_format)
+      DateTime.strptime(partition.name.split("_").last, name_format)
+    end
+
     def round_date(date, period)
       date = date.to_date
       case period.to_sym

@@ -88,12 +88,11 @@ CREATE TABLE #{quote_table(partition)}
         future_defs = []
         past_defs = []
         name_format = self.name_format(period)
-        existing_tables = original_table.existing_partitions(period)
-        existing_tables = (existing_tables + added_partitions).uniq(&:name).sort_by(&:name)
+        existing_partitions = original_table.existing_partitions(period)
+        existing_partitions = (existing_partitions + added_partitions).uniq(&:name).sort_by(&:name)
 
-        existing_tables.each do |existing_table|
-          day = DateTime.strptime(existing_table.name.split("_").last, name_format)
-          partition = Table.new(original_table.schema, "#{original_table.name}_#{day.strftime(name_format(period))}")
+        existing_partitions.each do |partition|
+          day = partition_date(partition, name_format)
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
               INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"

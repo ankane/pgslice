@@ -12,7 +12,7 @@ module PgSlice
     end
 
     def exists?
-      existing_tables(schema, like: name).any?
+      existing_tables(like: name).any?
     end
 
     def columns
@@ -117,7 +117,7 @@ module PgSlice
           "6,8"
         end
 
-      existing_tables(schema, like: "#{name}_%").select { |t| /\A#{Regexp.escape("#{name}_")}\d{#{count}}\z/.match(t.name) }
+      existing_tables(like: "#{name}_%").select { |t| /\A#{Regexp.escape("#{name}_")}\d{#{count}}\z/.match(t.name) }
     end
 
     def fetch_comment
@@ -130,7 +130,7 @@ module PgSlice
 
     protected
 
-    def existing_tables(schema, like:)
+    def existing_tables(like:)
       query = "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename LIKE $2 ORDER BY 1, 2"
       execute(query, [schema, like]).map { |r| Table.new(r["schemaname"], r["tablename"]) }
     end
