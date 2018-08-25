@@ -104,7 +104,7 @@ module PgSlice
       (execute(query)[0]["min"] || 1).to_i
     end
 
-    def existing_partitions(period = nil)
+    def partitions(period = nil)
       count =
         case period
         when "day"
