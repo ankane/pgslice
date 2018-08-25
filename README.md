@@ -1,6 +1,6 @@
 # pgslice
 
-Postgres partitioning as easy as pie. Works great for both new and existing tables, with zero downtime and minimal app changes. Archive older data on a rolling basis to keep your database size under control.
+Postgres partitioning as easy as pie. Works great for both new and existing tables, with zero downtime and minimal app changes. No need to install anything on your database server. Archive older data on a rolling basis to keep your database size under control.
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
