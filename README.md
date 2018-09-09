@@ -371,7 +371,7 @@ Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/doc
 
 ## Data Protection
 
-Always make sure your connection is secure when connecting to your database over a network you don’t fully trust. Your best option is to connect over SSH or a VPN. Another option is to use `sslmode=verify-full` with a root certificate. If you don’t do this, your database credentials can be compromised.
+Always make sure your connection is secure when connecting to your database over a network you don’t fully trust. Your best option is to connect over SSH or a VPN. Another option is to use `sslmode=verify-full`. If you don’t do this, your database credentials can be compromised.
 
 ## Upgrading
 
