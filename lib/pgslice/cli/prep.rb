@@ -23,6 +23,10 @@ module PgSlice
 
       queries = []
 
+      # version summary
+      # 1. trigger-based
+      # 2. declarative, with indexes and foreign keys on child tables
+      # 3. declarative, with indexes and foreign keys on parent table
       version =
         if options[:trigger_based] || server_version_num < 100000
           1
