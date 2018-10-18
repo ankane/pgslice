@@ -85,7 +85,7 @@ This will give you the `pgslice` command.
 
 ## Sample Output
 
-pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option. The sample output is for Postgres 11.
+pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
 
 ```sh
 pgslice prep visits created_at month
