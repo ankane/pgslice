@@ -85,41 +85,20 @@ This will give you the `pgslice` command.
 
 ## Sample Output
 
-pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option.
+pgslice prints the SQL commands that were executed on the server. To print without executing, use the `--dry-run` option. The sample output is for Postgres 11.
 
 ```sh
 pgslice prep visits created_at month
 ```
 
 ```sql
--- Postgres 10
-
 BEGIN;
 
-CREATE TABLE visits_intermediate (LIKE visits INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (created_at);
+CREATE TABLE "public"."visits_intermediate" (LIKE "public"."visits" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE ("created_at");
 
-COMMENT ON TABLE visits_intermediate is 'column:created_at,period:month';
+CREATE INDEX ON "public"."visits_intermediate" USING btree ("created_at");
 
-COMMIT;
-
--- Postgres 9.6 and below
-
-BEGIN;
-
-CREATE TABLE visits_intermediate (LIKE visits INCLUDING ALL);
-
-CREATE FUNCTION visits_insert_trigger()
-    RETURNS trigger AS $$
-    BEGIN
-        RAISE EXCEPTION 'Create partitions first.';
-    END;
-    $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER visits_insert_trigger
-    BEFORE INSERT ON visits_intermediate
-    FOR EACH ROW EXECUTE PROCEDURE visits_insert_trigger();
-
-COMMENT ON TRIGGER visits_insert_trigger ON visits_intermediate is 'column:created_at,period:month';
+COMMENT ON TABLE "public"."visits_intermediate" is 'column:createdAt,period:day,cast:date,version:3';
 
 COMMIT;
 ```
@@ -129,73 +108,19 @@ pgslice add_partitions visits --intermediate --past 1 --future 1
 ```
 
 ```sql
--- Postgres 10
-
 BEGIN;
 
-CREATE TABLE visits_201608 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-08-01') TO ('2016-09-01');
+CREATE TABLE "public"."visits_201808" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2018-08-01') TO ('2018-09-01');
 
-ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
+ALTER TABLE "public"."visits_201808" ADD PRIMARY KEY ("id");
 
-CREATE INDEX ON visits_201608 USING btree (user_id);
+CREATE TABLE "public"."visits_201809" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2018-09-01') TO ('2018-10-01');
 
-CREATE TABLE visits_201609 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-09-01') TO ('2016-10-01');
+ALTER TABLE "public"."visits_201809" ADD PRIMARY KEY ("id");
 
-ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
+CREATE TABLE "public"."visits_201810" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2018-10-01') TO ('2018-11-01');
 
-CREATE INDEX ON visits_201609 USING btree (user_id);
-
-CREATE TABLE visits_201610 PARTITION OF visits_intermediate FOR VALUES FROM ('2016-10-01') TO ('2016-11-01');
-
-ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201610 USING btree (user_id);
-
-COMMIT;
-
--- Postgres 9.6 and below
-
-BEGIN;
-
-CREATE TABLE visits_201608
-    (CHECK (created_at >= '2016-08-01'::date AND created_at < '2016-09-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201608 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201608 USING btree (user_id);
-
-CREATE TABLE visits_201609
-    (CHECK (created_at >= '2016-09-01'::date AND created_at < '2016-10-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201609 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201609 USING btree (user_id);
-
-CREATE TABLE visits_201610
-    (CHECK (created_at >= '2016-10-01'::date AND created_at < '2016-11-01'::date))
-    INHERITS (visits_intermediate);
-
-ALTER TABLE visits_201610 ADD PRIMARY KEY (id);
-
-CREATE INDEX ON visits_201610 USING btree (user_id);
-
-CREATE OR REPLACE FUNCTION visits_insert_trigger()
-    RETURNS trigger AS $$
-    BEGIN
-        IF (NEW.created_at >= '2016-09-01'::date AND NEW.created_at < '2016-10-01'::date) THEN
-            INSERT INTO visits_201609 VALUES (NEW.*);
-        ELSIF (NEW.created_at >= '2016-10-01'::date AND NEW.created_at < '2016-11-01'::date) THEN
-            INSERT INTO visits_201610 VALUES (NEW.*);
-        ELSIF (NEW.created_at >= '2016-08-01'::date AND NEW.created_at < '2016-09-01'::date) THEN
-            INSERT INTO visits_201608 VALUES (NEW.*);
-        ELSE
-            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-        END IF;
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
+ALTER TABLE "public"."visits_201808" ADD PRIMARY KEY ("id");
 
 COMMIT;
 ```
@@ -206,19 +131,19 @@ pgslice fill visits
 
 ```sql
 /* 1 of 3 */
-INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
-    SELECT "id", "user_id", "ip", "created_at" FROM visits
-    WHERE id > 0 AND id <= 10000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
+    WHERE "id" > 0 AND "id" <= 10000 AND "created_at" >= '2018-08-01'::date AND "created_at" < '2018-11-01'::date
 
 /* 2 of 3 */
-INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
-    SELECT "id", "user_id", "ip", "created_at" FROM visits
-    WHERE id > 10000 AND id <= 20000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
+    WHERE "id" > 10000 AND "id" <= 20000 AND "created_at" >= '2018-08-01'::date AND "created_at" < '2018-11-01'::date
 
 /* 3 of 3 */
-INSERT INTO visits_intermediate ("id", "user_id", "ip", "created_at")
-    SELECT "id", "user_id", "ip", "created_at" FROM visits
-    WHERE id > 20000 AND id <= 30000 AND created_at >= '2016-08-01'::date AND created_at < '2016-11-01'::date
+INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
+    SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
+    WHERE "id" > 20000 AND "id" <= 30000 AND "created_at" >= '2018-08-01'::date AND "created_at" < '2018-11-01'::date
 ```
 
 ```sh
@@ -226,13 +151,13 @@ pgslice analyze visits
 ```
 
 ```sql
-ANALYZE VERBOSE visits_201608;
+ANALYZE VERBOSE "public"."visits_201808";
 
-ANALYZE VERBOSE visits_201609;
+ANALYZE VERBOSE "public"."visits_201809";
 
-ANALYZE VERBOSE visits_201610;
+ANALYZE VERBOSE "public"."visits_201810";
 
-ANALYZE VERBOSE visits_intermediate;
+ANALYZE VERBOSE "public"."visits_intermediate";
 ```
 
 ```sh
@@ -244,11 +169,11 @@ BEGIN;
 
 SET LOCAL lock_timeout = '5s';
 
-ALTER TABLE visits RENAME TO visits_retired;
+ALTER TABLE "public"."visits" RENAME TO "visits_retired";
 
-ALTER TABLE visits_intermediate RENAME TO visits;
+ALTER TABLE "public"."visits_intermediate" RENAME TO "visits";
 
-ALTER SEQUENCE visits_id_seq OWNED BY visits.id;
+ALTER SEQUENCE "visits_id_seq" OWNED BY "public"."visits"."id";
 
 COMMIT;
 ```
@@ -294,14 +219,14 @@ WHERE
 Back up and drop older partitions each day, month, or year.
 
 ```sh
-pg_dump -c -Fc -t <table>_201609 $PGSLICE_URL > <table>_201609.dump
-psql -c "DROP <table>_201609" $PGSLICE_URL
+pg_dump -c -Fc -t <table>_201809 $PGSLICE_URL > <table>_201809.dump
+psql -c "DROP <table>_201809" $PGSLICE_URL
 ```
 
 If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
 
 ```sh
-s3cmd put <table>_201609.dump s3://<s3-bucket>/<table>_201609.dump
+s3cmd put <table>_201809.dump s3://<s3-bucket>/<table>_201809.dump
 ```
 
 ## Additional Commands
@@ -322,16 +247,9 @@ pgslice unswap <table>
 
 This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
 
-### Writes
-
-Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
-
-1. Insert directly into the partition
-2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
-
 ### Reads
 
-When possible, queries should include the column you partition on to limit the number of partitions the database needs to check.  For instance, if you partition on `created_at`, try to include it in queries:
+When possible, queries should include the column you partition on to limit the number of partitions the database needs to check. For instance, if you partition on `created_at`, try to include it in queries:
 
 ```sql
 SELECT * FROM
@@ -339,7 +257,7 @@ SELECT * FROM
 WHERE
     user_id = 123 AND
     -- for performance
-    created_at >= '2016-09-01' AND created_at < '2016-09-02'
+    created_at >= '2018-09-01' AND created_at < '2018-09-02'
 ```
 
 For this to be effective, ensure `constraint_exclusion` is set to `partition` (default value) or `on`.
@@ -347,6 +265,13 @@ For this to be effective, ensure `constraint_exclusion` is set to `partition` (d
 ```sql
 SHOW constraint_exclusion;
 ```
+
+### Writes
+
+Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
+
+1. Insert directly into the partition
+2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
 
 ## One Off Tasks
 
@@ -362,8 +287,8 @@ pgslice swap <table>
 
 Once a table is partitioned, here’s how to change the schema:
 
-- To add, remove, or modify a column, make the update on the master table only
-- To add or remove an index, make the update on the master table and all partitions (for Postgres 11, make the update on the master table only)
+- To add, remove, or modify a column, make the update on the master table only.
+- To add or remove an index or foreign key, make the update on the master table. For Postgres < 11, make the update on all partitions as well.
 
 ## Declarative Partitioning
 

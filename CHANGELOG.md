@@ -1,6 +1,6 @@
 ## 0.4.5 [unreleased]
 
-- Added foreign keys to parent table in Postgres 11
+- Added support for Postgres 11 foreign key improvements
 - Improved versioning
 
 ## 0.4.4
