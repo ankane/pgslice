@@ -135,7 +135,8 @@ module PgSlice
       trigger_comment = fetch_trigger(trigger_name)
       comment = trigger_comment || fetch_comment
       if comment
-        field, period, cast = comment["comment"].split(",").map { |v| v.split(":").last } rescue [nil, nil, nil]
+        field, period, cast, version = comment["comment"].split(",").map { |v| v.split(":").last } rescue []
+        version = version.to_i if version
       end
 
       unless period
@@ -156,8 +157,10 @@ module PgSlice
         needs_comment = true
       end
 
-      declarative = !trigger_comment
-      [period, field, cast, needs_comment, declarative]
+      version ||= trigger_comment ? 1 : 2
+      declarative = version > 1
+
+      [period, field, cast, needs_comment, declarative, version]
     end
 
     protected

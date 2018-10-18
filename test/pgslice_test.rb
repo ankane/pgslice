@@ -84,6 +84,12 @@ class PgSliceTest < Minitest::Test
     end
     assert_includes error.message, "partition"
 
+    # test foreign key
+    error = assert_raises(PG::ServerError) do
+      $conn.exec('INSERT INTO "Posts" ("' + column + '", "UserId") VALUES (NOW(), 1)')
+    end
+    assert_includes error.message, "violates foreign key constraint"
+
     # test adding column
     add_column "Posts", "updatedAt"
     assert_column "Posts", "updatedAt"

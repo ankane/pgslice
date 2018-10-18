@@ -23,24 +23,37 @@ module PgSlice
 
       queries = []
 
-      declarative = server_version_num >= 100000 && !options[:trigger_based]
+      version =
+        if options[:trigger_based] || server_version_num < 100000
+          1
+        elsif server_version_num < 110000
+          2
+        else
+          3
+        end
+
+      declarative = version > 1
 
       if declarative && options[:partition]
         queries << <<-SQL
 CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
 
-        if server_version_num >= 110000
+        if version == 3
           index_defs = table.index_defs
           index_defs.each do |index_def|
             queries << make_index_def(index_def, intermediate_table)
+          end
+
+          table.foreign_keys.each do |fk_def|
+            queries << make_fk_def(fk_def, intermediate_table)
           end
         end
 
         # add comment
         cast = table.column_cast(column)
         queries << <<-SQL
-COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast},version:#{version}';
         SQL
       else
         queries << <<-SQL

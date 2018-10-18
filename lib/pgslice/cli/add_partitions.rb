@@ -15,7 +15,7 @@ module PgSlice
       past = options[:past]
       range = (-1 * past)..future
 
-      period, field, cast, needs_comment, declarative = table.fetch_settings(original_table.trigger_name)
+      period, field, cast, needs_comment, declarative, version = table.fetch_settings(original_table.trigger_name)
       unless period
         message = "No settings found: #{table}"
         message = "#{message}\nDid you mean to use --intermediate?" unless options[:intermediate]
@@ -41,14 +41,14 @@ module PgSlice
         end
 
       # indexes automatically propagate in Postgres 11+
-      index_defs =
-        if !declarative || server_version_num < 110000
-          schema_table.index_defs
-        else
-          []
-        end
+      if version < 3
+        index_defs = schema_table.index_defs
+        fk_defs = schema_table.foreign_keys
+      else
+        index_defs = []
+        fk_defs = []
+      end
 
-      fk_defs = schema_table.foreign_keys
       primary_key = schema_table.primary_key
 
       added_partitions = []
