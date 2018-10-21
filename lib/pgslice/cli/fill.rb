@@ -1,4 +1,8 @@
 module PgSlice
+
+  PG_NUMERIC_TYPES = ["smallint", "integer", "bigint", "decimal", "numeric",
+                      "real", "double precision", "smallserial", "bigserial"]
+
   class CLI
     desc "fill TABLE", "Fill the partitions in batches"
     option :batch_size, type: :numeric, default: 10000, desc: "Batch size"
@@ -41,12 +45,11 @@ module PgSlice
       primary_key = schema_table.primary_key[0]
       abort "No primary key" unless primary_key
 
-      max_source_id = nil
-      begin
-        max_source_id = source_table.max_id(primary_key)
-      rescue PG::UndefinedFunction
+      if !PG_NUMERIC_TYPES.include? source_table.column_type(primary_key)
         abort "Only numeric primary keys are supported"
       end
+
+      max_source_id = source_table.max_id(primary_key)
 
       max_dest_id =
         if options[:start]

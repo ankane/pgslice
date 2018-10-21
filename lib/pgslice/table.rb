@@ -82,8 +82,13 @@ module PgSlice
     end
 
     def column_cast(column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, name, column])[0]["data_type"]
+      data_type = column_type(column)
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
+    end
+
+    def column_type(column)
+      execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
+              [schema, name, column])[0]["data_type"]
     end
 
     def max_id(primary_key, below: nil, where: nil)

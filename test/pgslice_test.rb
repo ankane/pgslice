@@ -30,6 +30,19 @@ class PgSliceTest < Minitest::Test
     assert true
   end
 
+  def test_invalid_pks
+    ["Invalid_UUID_PK", "Invalid_TEXT_PK"].each do |t|
+      run_command "prep #{t} createdAt month"
+      run_command "add_partitions #{t} --intermediate --past 1 --future 1"
+      _, err = capture_io do
+        assert_raises SystemExit do
+          run_command "fill #{t}"
+        end
+      end
+      assert_match /Only numeric primary keys are supported/, err
+    end
+  end
+
   def test_trigger_based
     assert_period "month", trigger_based: true
   end
