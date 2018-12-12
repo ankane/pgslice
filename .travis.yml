@@ -1,12 +1,13 @@
+dist: xenial
 language: ruby
-rvm: 2.5.1
-cache: bundler
-sudo: false
+rvm: 2.5.3
+gemfile:
+  - Gemfile
+services:
+  - postgresql
 script: bundle exec rake test
-addons:
-  postgresql: "9.4"
-before_script:
-  - psql -c 'create database pgslice_test;' -U postgres
+before_install:
+  - psql -c 'CREATE DATABASE pgslice_test;' -U postgres
 notifications:
   email:
     on_success: never
