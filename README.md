@@ -14,7 +14,7 @@ pgslice is a command line tool. To install, run:
 gem install pgslice
 ```
 
-This will give you the `pgslice` command.
+This will give you the `pgslice` command. If installation fails, you may need to install [dependencies](#dependencies).
 
 ## Steps
 
@@ -297,6 +297,22 @@ Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/doc
 ## Data Protection
 
 Always make sure your [connection is secure](https://ankane.org/postgres-sslmode-explained) when connecting to your database over a network you don’t fully trust. Your best option is to connect over SSH or a VPN. Another option is to use `sslmode=verify-full`. If you don’t do this, your database credentials can be compromised.
+
+## Dependencies
+
+If installation fails, your system may be missing Ruby or libpq.
+
+On Mac, run:
+
+```sh
+brew install postgresql
+```
+
+On Ubuntu, run:
+
+```sh
+sudo apt-get install ruby-dev libpq-dev build-essential
+```
 
 ## Upgrading
 
