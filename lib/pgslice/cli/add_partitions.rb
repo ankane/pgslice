@@ -4,6 +4,7 @@ module PgSlice
     option :intermediate, type: :boolean, default: false, desc: "Add to intermediate table"
     option :past, type: :numeric, default: 0, desc: "Number of past partitions to add"
     option :future, type: :numeric, default: 0, desc: "Number of future partitions to add"
+    option :on_conflict, type: :string, default: false, desc: "The ON CONFLICT option (string)"
     def add_partitions(table)
       original_table = create_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
@@ -14,6 +15,7 @@ module PgSlice
       future = options[:future]
       past = options[:past]
       range = (-1 * past)..future
+      on_conflict = options[:on_conflict]
 
       period, field, cast, needs_comment, declarative, version = table.fetch_settings(original_table.trigger_name)
       unless period
@@ -94,7 +96,7 @@ CREATE TABLE #{quote_table(partition)}
           day = partition_date(partition, name_format)
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-              INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
+              INSERT INTO #{quote_table(partition)} VALUES (NEW.*)#{" ON CONFLICT #{on_conflict}" if on_conflict};"
 
           if day.to_date < today
             past_defs << sql

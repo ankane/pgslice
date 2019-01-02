@@ -38,6 +38,14 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, column: "createdAtTz"
   end
 
+  def test_trigger_based_ocdn
+    run_command "prep Posts createdAt month --trigger-based"
+    run_command 'add_partitions Posts --intermediate --past 1 --future 1 --on-conflict "DO NOTHING"'
+    trigger_body = $conn.exec("SELECT prosrc FROM pg_proc WHERE proname = 'Posts_insert_trigger'").first["prosrc"] || ''
+    assert trigger_body.include?('ON CONFLICT DO NOTHING'), "Posts trigger doesn't have 'ON CONFLICT DO NOTHING'"
+    run_command "unprep Posts"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false)
@@ -104,7 +112,9 @@ class PgSliceTest < Minitest::Test
   def run_command(command)
     puts "pgslice #{command}"
     puts
-    PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
+    # rest_args contains string-like options
+    cmd, *rest_args = command.split("\"")
+    PgSlice::CLI.start(cmd.split(" ").concat(rest_args, ["--url", $url]))
     puts
   end
 
