@@ -1,7 +1,4 @@
-
-lib = File.expand_path("../lib", __FILE__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "pgslice/version"
+require_relative "lib/pgslice/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "pgslice"
