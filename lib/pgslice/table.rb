@@ -41,7 +41,7 @@ module PgSlice
       execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
     end
 
-    # http://stackoverflow.com/a/20537829
+    # https://stackoverflow.com/a/20537829
     def primary_key
       query = <<-SQL
         SELECT
