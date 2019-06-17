@@ -20,3 +20,12 @@ matrix:
     - name: "Postgres 10"
       addons:
         postgresql: "10"
+    - name: "Postgres 11"
+      addons:
+        postgresql: "11"
+        apt:
+          packages:
+            - postgresql-11
+      env:
+        - PGPORT=5433
+        - PGSLICE_URL=postgres://:5433/pgslice_test
