@@ -12,3 +12,11 @@ notifications:
   email:
     on_success: never
     on_failure: change
+matrix:
+  include:
+    - name: "Postgres 9.6"
+      addons:
+        postgresql: "9.6"
+    - name: "Postgres 10"
+      addons:
+        postgresql: "10"
