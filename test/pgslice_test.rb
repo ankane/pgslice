@@ -74,8 +74,9 @@ class PgSliceTest < Minitest::Test
     if server_version_num >= 100000 && !trigger_based
       assert insert_result["Id"]
     else
+      assert_equal 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
+      assert_equal 0, $conn.exec('SELECT COUNT(*) FROM ONLY "Posts"').first["count"].to_i
       assert_nil insert_result
-      assert 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
     end
 
     # test insert with null field
