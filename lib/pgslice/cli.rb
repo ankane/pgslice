@@ -14,7 +14,7 @@ module PgSlice
     map %w[--version -v] => :version
 
     def self.exit_on_failure?
-      true
+      ENV["PGSLICE_ENV"] != "test"
     end
 
     def initialize(*args)
