@@ -117,7 +117,7 @@ CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
         ELSE
             RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
         END IF;
-        RETURN NULL;
+        RETURN NEW;
     END;
     $$ LANGUAGE plpgsql;
           SQL
