@@ -144,7 +144,7 @@ module PgSlice
         function_def = execute("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = $1", [trigger_name])[0]
         return [] unless function_def
         function_def = function_def["pg_get_functiondef"]
-        sql_format = SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
+        sql_format = Helpers::SQL_FORMAT.find { |_, f| function_def.include?("'#{f}'") }
         return [] unless sql_format
         period = sql_format[0]
         field = /to_char\(NEW\.(\w+),/.match(function_def)[1]
