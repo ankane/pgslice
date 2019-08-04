@@ -5,7 +5,7 @@ require "minitest/pride"
 
 ENV["PGSLICE_ENV"] = "test"
 
-$url = ENV["PGSLICE_URL"] || "postgres://localhost/pgslice_test"
+$url = ENV["PGSLICE_URL"] || "postgres://localhost/pgslice_test?sslmode=disable"
 $conn = PG::Connection.new($url)
 $conn.exec <<-SQL
 SET client_min_messages = warning;

@@ -36,6 +36,7 @@ module PgSlice
         uri.query = URI.encode_www_form(params)
 
         ENV["PGCONNECT_TIMEOUT"] ||= "1"
+        ENV["PGSSLMODE"] ||= "require"
         PG::Connection.new(uri.to_s)
       end
     rescue PG::ConnectionBad => e

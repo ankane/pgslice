@@ -1,3 +1,7 @@
+## 0.5.0 [unreleased]
+
+- Require TLS by default
+
 ## 0.4.5
 
 - Added support for Postgres 11 foreign key improvements
