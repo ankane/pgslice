@@ -40,7 +40,13 @@ module PgSlice
         PG::Connection.new(uri.to_s)
       end
     rescue PG::ConnectionBad => e
-      abort e.message
+      if e.message.include?("SSL was required")
+        # first sentence consistent with actual error message
+        # to make it easier to search
+        abort "Server does not support SSL. Use sslmode=disable if you fully trust the network."
+      else
+        abort e.message
+      end
     rescue URI::InvalidURIError
       abort "Invalid url"
     end
