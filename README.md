@@ -80,7 +80,7 @@ This will give you the `pgslice` command. If installation fails, you may need to
 
   ```sql
   pg_dump -c -Fc -t <table>_retired $PGSLICE_URL > <table>_retired.dump
-  psql -c "DROP <table>_retired" $PGSLICE_URL
+  psql -c "DROP TABLE <table>_retired" $PGSLICE_URL
   ```
 
 ## Sample Output
@@ -220,7 +220,7 @@ Back up and drop older partitions each day, month, or year.
 
 ```sh
 pg_dump -c -Fc -t <table>_201809 $PGSLICE_URL > <table>_201809.dump
-psql -c "DROP <table>_201809" $PGSLICE_URL
+psql -c "DROP TABLE <table>_201809" $PGSLICE_URL
 ```
 
 If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
