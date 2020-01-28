@@ -273,6 +273,16 @@ Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as
 1. Insert directly into the partition
 2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
 
+## Rails
+
+For Rails, specify the primary key for partitioned models (otherwise, it won’t be returned on inserts).
+
+```ruby
+class User < ApplicationRecord
+  self.primary_key = "id"
+end
+```
+
 ## One Off Tasks
 
 You can also use pgslice to reduce the size of a table without partitioning by creating a new table, filling it with a subset of records, and swapping it in.
