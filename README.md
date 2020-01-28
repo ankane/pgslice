@@ -273,9 +273,9 @@ Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as
 1. Insert directly into the partition
 2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
 
-## Rails
+### Rails
 
-For Rails, specify the primary key for partitioned models (otherwise, it won’t be returned on inserts).
+For Postgres 11+, specify the primary key for partitioned models to ensure it’s returned.
 
 ```ruby
 class User < ApplicationRecord
