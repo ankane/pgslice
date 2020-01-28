@@ -283,12 +283,12 @@ class Visit < ApplicationRecord
 end
 ```
 
-Before Postgres 11, preload the value.
+Before Postgres 11, load the value afterwards.
 
 ```ruby
 class Visit < ApplicationRecord
-  before_create do
-    self.id ||= self.class.connection.execute("select nextval('#{self.class.sequence_name}')").first["nextval"]
+  after_create do
+    self.id ||= self.class.connection.execute("select currval('#{self.class.sequence_name}')").first["currval"]
   end
 end
 ```
