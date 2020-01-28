@@ -288,7 +288,7 @@ Before Postgres 10, preload the value.
 ```ruby
 class Visit < ApplicationRecord
   before_create do
-    self.id ||= self.class.connection.execute("select nextval('#{self.class.sequence_name}')").first["nextval"]
+    self.id ||= self.class.connection.select_all("SELECT nextval('#{self.class.sequence_name}')").first["nextval"]
   end
 end
 ```
