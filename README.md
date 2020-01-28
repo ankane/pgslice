@@ -275,7 +275,7 @@ Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as
 
 ## Rails
 
-For Postgres 11+, specify the primary key for partitioned models to ensure it’s returned.
+For Postgres 10+, specify the primary key for partitioned models to ensure it’s returned.
 
 ```ruby
 class Visit < ApplicationRecord
@@ -283,7 +283,7 @@ class Visit < ApplicationRecord
 end
 ```
 
-Before Postgres 11, load the value afterwards.
+Before Postgres 10, load the value afterwards.
 
 ```ruby
 class Visit < ApplicationRecord
