@@ -1,6 +1,5 @@
-dist: xenial
+dist: bionic
 language: ruby
-rvm: 2.6.3
 gemfile:
   - Gemfile
 services:
@@ -15,12 +14,15 @@ notifications:
 matrix:
   include:
     - name: "Postgres 9.6"
+      rvm: 2.4
       addons:
         postgresql: "9.6"
     - name: "Postgres 10"
+      rvm: 2.5
       addons:
         postgresql: "10"
     - name: "Postgres 11"
+      rvm: 2.6
       addons:
         postgresql: "11"
         apt:
@@ -30,6 +32,7 @@ matrix:
         - PGPORT=5433
         - PGSLICE_URL=postgres://:5433/pgslice_test
     - name: "Postgres 12"
+      rvm: 2.7
       addons:
         postgresql: "12"
         apt:
