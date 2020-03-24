@@ -28,9 +28,6 @@ matrix:
         apt:
           packages:
             - postgresql-11
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
     - name: "Postgres 12"
       rvm: 2.7
       addons:
