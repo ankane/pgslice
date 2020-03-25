@@ -34,15 +34,13 @@ This will give you the `pgslice` command. If installation fails, you may need to
 
   Period can be `day`, `month`, or `year`.
 
-  This creates a table named `<table>_intermediate` with the appropriate trigger for partitioning.
+  This creates a partitioned table named `<table>_intermediate`.
 
-4. Add partitions
+4. Add partitions to the intermediate table
 
   ```sh
   pgslice add_partitions <table> --intermediate --past 3 --future 3
   ```
-
-  This creates child tables that inherit from the intermediate table.
 
   Use the `--past` and `--future` options to control the number of partitions.
 
