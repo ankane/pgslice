@@ -370,6 +370,7 @@ This will give you the `pgslice` command.
 
 Also check out:
 
+- [Dexter](https://github.com/ankane/dexter) - The automatic indexer for Postgres
 - [PgHero](https://github.com/ankane/pghero) - A performance dashboard for Postgres
 - [pgsync](https://github.com/ankane/pgsync) - Sync Postgres data to your local machine
 
