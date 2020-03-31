@@ -1,7 +1,9 @@
 # dependencies
-require "cgi"
 require "pg"
 require "thor"
+
+# stdlib
+require "cgi"
 require "time"
 
 # modules
