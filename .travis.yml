@@ -25,9 +25,6 @@ matrix:
       rvm: 2.6
       addons:
         postgresql: "11"
-        apt:
-          packages:
-            - postgresql-11
     - name: "Postgres 12"
       rvm: 2.7
       addons:
