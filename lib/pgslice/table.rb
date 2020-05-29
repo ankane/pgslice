@@ -109,6 +109,7 @@ module PgSlice
       (execute(query)[0]["min"] || 1).to_i
     end
 
+    # ensure this returns partitions in the correct order
     def partitions
       query = <<-SQL
         SELECT
