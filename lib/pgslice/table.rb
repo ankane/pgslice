@@ -117,7 +117,7 @@ module PgSlice
         WHERE
           nmsp_parent.nspname = $1 AND
           parent.relname = $2
-        ORDER BY name ASC
+        ORDER BY child.relname ASC
       SQL
       execute(query, [schema, name]).map { |r| Table.new(r["schema"], r["name"]) }
     end
