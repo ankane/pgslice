@@ -1,6 +1,7 @@
 ## 0.4.6 (unreleased)
 
 - Ensure correct order with multi-column primary keys
+- Ensure fill always uses correct date range
 
 ## 0.4.5 (2018-10-18)
 
