@@ -33,6 +33,7 @@ module PgSlice
         WHERE s.relkind = 'S'
           AND n.nspname = $1
           AND t.relname = $2
+        ORDER BY s.relname ASC
       SQL
       execute(query, [schema, name])
     end
