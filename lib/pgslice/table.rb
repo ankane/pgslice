@@ -43,11 +43,14 @@ module PgSlice
     end
 
     # https://stackoverflow.com/a/20537829
+    # TODO can simplify with array_position in Postgres 9.5+
     def primary_key
       query = <<-SQL
         SELECT
           pg_attribute.attname,
-          format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
+          format_type(pg_attribute.atttypid, pg_attribute.atttypmod),
+          pg_attribute.attnum,
+          pg_index.indkey
         FROM
           pg_index, pg_class, pg_attribute, pg_namespace
         WHERE
@@ -59,7 +62,8 @@ module PgSlice
           pg_attribute.attnum = any(pg_index.indkey) AND
           indisprimary
       SQL
-      execute(query, [schema, name]).map { |r| r["attname"] }
+      rows = execute(query, [schema, name])
+      rows.sort_by { |r| r["indkey"].split(" ").index(r["attnum"]) }.map { |r| r["attname"] }
     end
 
     def index_defs

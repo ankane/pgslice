@@ -1,3 +1,7 @@
+## 0.4.6 (unreleased)
+
+- Ensure correct order with multi-column primary keys
+
 ## 0.4.5 (2018-10-18)
 
 - Added support for Postgres 11 foreign key improvements
