@@ -171,7 +171,7 @@ ALTER TABLE "public"."visits" RENAME TO "visits_retired";
 
 ALTER TABLE "public"."visits_intermediate" RENAME TO "visits";
 
-ALTER SEQUENCE "visits_id_seq" OWNED BY "public"."visits"."id";
+ALTER SEQUENCE "public"."visits_id_seq" OWNED BY "public"."visits"."id";
 
 COMMIT;
 ```
