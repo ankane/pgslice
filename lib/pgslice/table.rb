@@ -23,15 +23,17 @@ module PgSlice
     def sequences
       query = <<-SQL
         SELECT
-          a.attname as related_column,
-          s.relname as sequence_name
+          a.attname AS related_column,
+          n.nspname AS sequence_schema,
+          s.relname AS sequence_name
         FROM pg_class s
-          JOIN pg_depend d ON d.objid = s.oid
-          JOIN pg_class t ON d.objid = s.oid AND d.refobjid = t.oid
-          JOIN pg_attribute a ON (d.refobjid, d.refobjsubid) = (a.attrelid, a.attnum)
-          JOIN pg_namespace n ON n.oid = s.relnamespace
+          INNER JOIN pg_depend d ON d.objid = s.oid
+          INNER JOIN pg_class t ON d.objid = s.oid AND d.refobjid = t.oid
+          INNER JOIN pg_attribute a ON (d.refobjid, d.refobjsubid) = (a.attrelid, a.attnum)
+          INNER JOIN pg_namespace n ON n.oid = s.relnamespace
+          INNER JOIN pg_namespace nt ON nt.oid = t.relnamespace
         WHERE s.relkind = 'S'
-          AND n.nspname = $1
+          AND nt.nspname = $1
           AND t.relname = $2
         ORDER BY s.relname ASC
       SQL

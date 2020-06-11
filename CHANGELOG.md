@@ -1,3 +1,7 @@
+## 0.4.7 (unreleased)
+
+- Fixed sequence query if sequence in different schema than table
+
 ## 0.4.6 (2020-05-29)
 
 - Ensure correct order with multi-column primary keys
