@@ -22,8 +22,6 @@ jobs:
       env:
         - PGPORT=5433
         - PGSLICE_URL=postgres://:5433/pgslice_test
-services:
-  - postgresql
 script: bundle exec rake test
 before_install:
   - createdb pgslice_test
