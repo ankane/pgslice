@@ -16,12 +16,6 @@ jobs:
       rvm: 2.7
       addons:
         postgresql: "12"
-        apt:
-          packages:
-            - postgresql-12
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
 script: bundle exec rake test
 before_install:
   - createdb pgslice_test
