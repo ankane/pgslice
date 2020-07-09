@@ -103,10 +103,18 @@ class PgSliceTest < Minitest::Test
   end
 
   def run_command(command)
-    puts "$ pgslice #{command}"
-    puts
-    PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
-    puts
+    if verbose?
+      puts "$ pgslice #{command}"
+      puts
+    end
+    stdout, stderr = capture_io do
+      PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
+    end
+    assert_equal "", stderr
+    if verbose?
+      puts stdout
+      puts
+    end
   end
 
   def add_column(table, column)
@@ -128,5 +136,9 @@ class PgSliceTest < Minitest::Test
 
   def server_version_num
     $conn.exec("SHOW server_version_num").first["server_version_num"].to_i
+  end
+
+  def verbose?
+    ENV["VERBOSE"]
   end
 end
