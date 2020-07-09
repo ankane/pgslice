@@ -13,7 +13,7 @@ jobs:
         - sudo cp /etc/postgresql/{9.3,12}/main/pg_hba.conf
         - sudo pg_ctlcluster 12 main restart
         - createdb pgslice_test
-        - psql -d postgres -c "SHOW server_version"
+        - psql -c 'SHOW server_version'
       env:
         - PGUSER=postgres
 script: bundle exec rake test
