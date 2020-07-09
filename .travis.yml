@@ -8,7 +8,6 @@ jobs:
         apt:
           packages:
             - postgresql-12
-            - postgresql-client-12
       before_install:
         - sudo sed -i 's/port = 5433/port = 5432/' /etc/postgresql/12/main/postgresql.conf
         - sudo cp /etc/postgresql/{9.3,12}/main/pg_hba.conf
