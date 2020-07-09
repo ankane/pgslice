@@ -1,30 +1,7 @@
 dist: bionic
 language: ruby
-gemfile:
-  - Gemfile
-services:
-  - postgresql
-script: bundle exec rake test
-before_install:
-  - createdb pgslice_test
-notifications:
-  email:
-    on_success: never
-    on_failure: change
-matrix:
+jobs:
   include:
-    - name: "Postgres 9.6"
-      rvm: 2.4
-      addons:
-        postgresql: "9.6"
-    - name: "Postgres 10"
-      rvm: 2.5
-      addons:
-        postgresql: "10"
-    - name: "Postgres 11"
-      rvm: 2.6
-      addons:
-        postgresql: "11"
     - name: "Postgres 12"
       rvm: 2.7
       addons:
@@ -38,3 +15,24 @@ matrix:
       env:
         - PGPORT=5433
         - PGSLICE_URL=postgres://:5433/pgslice_test
+    - name: "Postgres 11"
+      rvm: 2.6
+      addons:
+        postgresql: "11"
+    - name: "Postgres 10"
+      rvm: 2.5
+      addons:
+        postgresql: "10"
+    - name: "Postgres 9.6"
+      rvm: 2.4
+      addons:
+        postgresql: "9.6"
+services:
+  - postgresql
+script: bundle exec rake test
+before_install:
+  - createdb pgslice_test
+notifications:
+  email:
+    on_success: never
+    on_failure: change
