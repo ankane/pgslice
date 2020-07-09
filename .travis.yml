@@ -2,20 +2,17 @@ dist: bionic
 language: ruby
 jobs:
   include:
-    - name: "Postgres 13"
-      rvm: 2.7
-      addons:
-        postgresql: "13"
-        apt:
-          packages:
-            - postgresql-13
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
     - name: "Postgres 12"
       rvm: 2.7
       addons:
         postgresql: "12"
+        apt:
+          packages:
+            - postgresql-12
+            - postgresql-client-12
+      env:
+        - PGPORT=5433
+        - PGSLICE_URL=postgres://:5433/pgslice_test
 script: bundle exec rake test
 before_install:
   - createdb pgslice_test
