@@ -4,6 +4,7 @@ jobs:
   include:
     - name: "Postgres 13"
       rvm: 2.7
+      dist: focal
       addons:
         postgresql: "13"
         apt:
@@ -12,11 +13,9 @@ jobs:
               key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
           packages:
             - postgresql-13
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
     - name: "Postgres 12"
       rvm: 2.7
+      dist: focal
       addons:
         postgresql: "12"
         apt:
@@ -25,9 +24,6 @@ jobs:
               key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
           packages:
             - postgresql-12
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
     - name: "Postgres 11"
       rvm: 2.6
       addons:
