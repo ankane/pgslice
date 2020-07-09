@@ -5,14 +5,13 @@ jobs:
     - name: "Postgres 12"
       rvm: 2.7
       addons:
-        postgresql: "12"
         apt:
           packages:
             - postgresql-12
             - postgresql-client-12
-      env:
-        - PGPORT=5433
-        - PGSLICE_URL=postgres://:5433/pgslice_test
+      before_install:
+        - sudo sed -i 's/port = 5433/port = 5432/' /etc/postgresql/12/main/postgresql.conf
+        - sudo pg_ctlcluster 12 main restart
 script: bundle exec rake test
 before_install:
   - createdb pgslice_test
