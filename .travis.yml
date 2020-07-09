@@ -10,7 +10,8 @@ jobs:
             - postgresql-12
       before_install:
         - sudo sed -i 's/port = 5433/port = 5432/' /etc/postgresql/12/main/postgresql.conf
-        - sudo cp /etc/postgresql/{9.3,12}/main/pg_hba.conf
+        - cat /etc/postgresql/9.3/main/pg_hba.conf
+        - cat /etc/postgresql/12/main/pg_hba.conf
         - sudo pg_ctlcluster 12 main restart
         - createdb pgslice_test
         - psql -c 'SHOW server_version'
