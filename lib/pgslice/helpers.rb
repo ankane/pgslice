@@ -36,7 +36,11 @@ module PgSlice
         uri.query = URI.encode_www_form(params)
 
         ENV["PGCONNECT_TIMEOUT"] ||= "1"
-        PG::Connection.new(uri.to_s)
+        conn = PG::Connection.new(uri.to_s)
+        conn.set_notice_processor do |message|
+          say message
+        end
+        conn
       end
     rescue PG::ConnectionBad => e
       abort e.message
