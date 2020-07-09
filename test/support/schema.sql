@@ -1,10 +1,7 @@
 SET client_min_messages = warning;
 
-DROP TABLE IF EXISTS "Posts_intermediate" CASCADE;
-DROP TABLE IF EXISTS "Posts" CASCADE;
-DROP TABLE IF EXISTS "Posts_retired" CASCADE;
-DROP FUNCTION IF EXISTS "Posts_insert_trigger"();
-DROP TABLE IF EXISTS "Users" CASCADE;
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
 
 CREATE TABLE "Users" (
   "Id" SERIAL PRIMARY KEY
