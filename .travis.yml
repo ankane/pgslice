@@ -7,9 +7,6 @@ jobs:
       addons:
         postgresql: "13"
         apt:
-          sources:
-            - sourceline: deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main 13
-              key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
           packages:
             - postgresql-13
       env:
@@ -20,26 +17,11 @@ jobs:
       addons:
         postgresql: "12"
         apt:
-          sources:
-            - sourceline: deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main 12
-              key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
           packages:
             - postgresql-12
       env:
         - PGPORT=5433
         - PGSLICE_URL=postgres://:5433/pgslice_test
-    - name: "Postgres 11"
-      rvm: 2.6
-      addons:
-        postgresql: "11"
-    - name: "Postgres 10"
-      rvm: 2.5
-      addons:
-        postgresql: "10"
-    - name: "Postgres 9.6"
-      rvm: 2.4
-      addons:
-        postgresql: "9.6"
 services:
   - postgresql
 script: bundle exec rake test
