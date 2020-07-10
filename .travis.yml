@@ -33,8 +33,6 @@ jobs:
       rvm: 2.4
       addons:
         postgresql: "9.6"
-services:
-  - postgresql
 script: bundle exec rake test
 before_install:
   - createdb pgslice_test
