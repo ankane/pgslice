@@ -13,6 +13,8 @@ jobs:
               key_url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
           packages:
             - postgresql-13
+      env:
+        - PGPORT=5433
     - name: "Postgres 12"
       rvm: 2.7
       dist: focal
