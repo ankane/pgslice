@@ -71,7 +71,7 @@ CREATE TABLE #{quote_table(partition)}
           SQL
         end
 
-        queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
+        queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any? && !partition.primary_key.any?
 
         index_defs.each do |index_def|
           queries << make_index_def(index_def, partition)
