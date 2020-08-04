@@ -63,6 +63,7 @@ class PgSliceTest < Minitest::Test
     else
       assert_primary_key "Posts_intermediate"
     end
+    assert_index "Posts_intermediate"
 
     run_command "fill Posts"
     run_command "analyze Posts"
