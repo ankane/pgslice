@@ -64,7 +64,7 @@ class PgSliceTest < Minitest::Test
       assert_primary_key "Posts_intermediate"
     end
 
-    if server_version_num == 100000
+    if server_version_num >= 100000 && server_version_num < 110000
       refute_index "Posts_intermediate"
     else
       assert_index "Posts_intermediate"
