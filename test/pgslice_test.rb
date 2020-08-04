@@ -43,6 +43,7 @@ class PgSliceTest < Minitest::Test
   def assert_period(period, column: "createdAt", trigger_based: false)
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
+
     now = Time.now.utc
     time_format = case period
       when "day"
@@ -55,6 +56,12 @@ class PgSliceTest < Minitest::Test
     partition_name = "Posts_#{now.strftime(time_format)}"
     assert_primary_key partition_name
     assert_foreign_key partition_name
+
+    if trigger_based
+      assert_primary_key "Posts_intermediate"
+    else
+      refute_primary_key "Posts_intermediate"
+    end
 
     run_command "fill Posts"
     run_command "analyze Posts"
@@ -129,13 +136,22 @@ class PgSliceTest < Minitest::Test
     assert ($conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first || {}).key?(column), "Missing column #{column} on #{table}"
   end
 
-  def assert_primary_key(table_name)
+  def primary_key(table_name)
     result = $conn.exec <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
       WHERE contype = 'p' AND conrelid = '"#{table_name}"'::regclass
     SQL
-    assert !result.detect { |row| row["def"] =~ /\APRIMARY KEY \("Id"\)\z/ }.nil?, "Missing primary key on #{table_name}"
+    result.first
+  end
+
+  def assert_primary_key(table_name)
+    result = primary_key(table_name)
+    assert_match "PRIMARY KEY (\"Id\")", result["def"]
+  end
+
+  def refute_primary_key(table_name)
+    assert_nil primary_key(table_name), "Unexpected primary key on #{table_name}"
   end
 
   def assert_foreign_key(table_name)
