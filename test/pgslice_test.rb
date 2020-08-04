@@ -63,7 +63,12 @@ class PgSliceTest < Minitest::Test
     else
       assert_primary_key "Posts_intermediate"
     end
-    assert_index "Posts_intermediate"
+
+    if server_version_num == 100000
+      refute_index "Posts_intermediate"
+    else
+      assert_index "Posts_intermediate"
+    end
 
     run_command "fill Posts"
     run_command "analyze Posts"
@@ -157,13 +162,21 @@ class PgSliceTest < Minitest::Test
     assert_nil primary_key(table_name), "Unexpected primary key on #{table_name}"
   end
 
-  def assert_index(table_name)
+  def index(table_name)
     result = $conn.exec <<~SQL
       SELECT pg_get_indexdef(indexrelid)
       FROM pg_index
       WHERE indrelid = '"#{table_name}"'::regclass AND indisprimary = 'f'
     SQL
-    assert result.first, "Missing index on #{table_name}"
+    result.first
+  end
+
+  def assert_index(table_name)
+    assert index(table_name), "Missing index on #{table_name}"
+  end
+
+  def refute_index(table_name)
+    refute index(table_name), "Unexpected index on #{table_name}"
   end
 
   def assert_foreign_key(table_name)
