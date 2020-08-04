@@ -53,6 +53,7 @@ class PgSliceTest < Minitest::Test
         "%Y"
       end
     partition_name = "Posts_#{now.strftime(time_format)}"
+    assert_primary_key partition_name
     assert_foreign_key partition_name
     run_command "fill Posts"
     run_command "analyze Posts"
@@ -125,8 +126,17 @@ class PgSliceTest < Minitest::Test
     assert ($conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first || {}).key?(column), "Missing column #{column} on #{table}"
   end
 
+  def assert_primary_key(table_name)
+    result = $conn.exec <<~SQL
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE contype = 'p' AND conrelid = '"#{table_name}"'::regclass
+    SQL
+    assert !result.detect { |row| row["def"] =~ /\APRIMARY KEY \("Id"\)\z/ }.nil?, "Missing primary key on #{table_name}"
+  end
+
   def assert_foreign_key(table_name)
-    result = $conn.exec <<-SQL
+    result = $conn.exec <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
       WHERE contype = 'f' AND conrelid = '"#{table_name}"'::regclass
