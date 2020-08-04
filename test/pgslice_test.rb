@@ -55,6 +55,7 @@ class PgSliceTest < Minitest::Test
     partition_name = "Posts_#{now.strftime(time_format)}"
     assert_primary_key partition_name
     assert_foreign_key partition_name
+
     run_command "fill Posts"
     run_command "analyze Posts"
     run_command "swap Posts"
@@ -68,7 +69,9 @@ class PgSliceTest < Minitest::Test
       else
         365 * 3
       end
-    assert_foreign_key "Posts_#{(now + days * 86400).strftime(time_format)}"
+    new_partition_name = "Posts_#{(now + days * 86400).strftime(time_format)}"
+    assert_primary_key new_partition_name
+    assert_foreign_key new_partition_name
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
