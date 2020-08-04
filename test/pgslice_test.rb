@@ -57,10 +57,10 @@ class PgSliceTest < Minitest::Test
     assert_primary_key partition_name
     assert_foreign_key partition_name
 
-    if trigger_based
-      assert_primary_key "Posts_intermediate"
-    else
+    if server_version_num >= 100000 && !trigger_based
       refute_primary_key "Posts_intermediate"
+    else
+      assert_primary_key "Posts_intermediate"
     end
 
     run_command "fill Posts"
