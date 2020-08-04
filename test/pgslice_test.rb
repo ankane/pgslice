@@ -72,15 +72,18 @@ class PgSliceTest < Minitest::Test
       assert_index "Posts_intermediate"
     end
 
+    # TODO test
     run_command "fill Posts"
+
     run_command "analyze Posts"
 
+    # TODO check sequence ownership
     run_command "swap Posts"
     assert table_exists?("Posts")
     assert table_exists?("Posts_retired")
     refute table_exists?("Posts_intermediate")
-    # TODO check sequence ownership
 
+    # TODO test
     run_command "fill Posts --swapped"
     run_command "add_partitions Posts --future 3"
     days = case period
@@ -125,15 +128,19 @@ class PgSliceTest < Minitest::Test
 
     run_command "analyze Posts --swapped"
 
+    # TODO check sequence ownership
     run_command "unswap Posts"
     assert table_exists?("Posts")
     assert table_exists?("Posts_intermediate")
     refute table_exists?("Posts_retired")
-    # TODO check sequence ownership
+    assert table_exists?(partition_name)
+    assert table_exists?(new_partition_name)
 
     run_command "unprep Posts"
     assert table_exists?("Posts")
     refute table_exists?("Posts_intermediate")
+    refute table_exists?(partition_name)
+    refute table_exists?(new_partition_name)
 
     assert true
   end
