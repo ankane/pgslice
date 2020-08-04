@@ -58,13 +58,15 @@ class PgSliceTest < Minitest::Test
     assert_index partition_name
     assert_foreign_key partition_name
 
-    if server_version_num >= 100000 && !trigger_based
+    declarative = server_version_num >= 100000 && !trigger_based
+
+    if declarative
       refute_primary_key "Posts_intermediate"
     else
       assert_primary_key "Posts_intermediate"
     end
 
-    if (server_version_num >= 100000 && server_version_num < 110000) && !trigger_based
+    if declarative && server_version_num < 110000
       refute_index "Posts_intermediate"
     else
       assert_index "Posts_intermediate"
@@ -90,7 +92,7 @@ class PgSliceTest < Minitest::Test
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
-    if server_version_num >= 100000 && !trigger_based
+    if declarative
       assert insert_result["Id"]
     else
       assert_equal 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
