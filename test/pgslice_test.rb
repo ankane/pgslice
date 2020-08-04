@@ -55,6 +55,7 @@ class PgSliceTest < Minitest::Test
       end
     partition_name = "Posts_#{now.strftime(time_format)}"
     assert_primary_key partition_name
+    assert_index partition_name
     assert_foreign_key partition_name
 
     if server_version_num >= 100000 && !trigger_based
@@ -78,6 +79,7 @@ class PgSliceTest < Minitest::Test
       end
     new_partition_name = "Posts_#{(now + days * 86400).strftime(time_format)}"
     assert_primary_key new_partition_name
+    assert_index new_partition_name
     assert_foreign_key new_partition_name
 
     # test insert works
@@ -152,6 +154,15 @@ class PgSliceTest < Minitest::Test
 
   def refute_primary_key(table_name)
     assert_nil primary_key(table_name), "Unexpected primary key on #{table_name}"
+  end
+
+  def assert_index(table_name)
+    result = $conn.exec <<~SQL
+      SELECT pg_get_indexdef(indexrelid)
+      FROM pg_index
+      WHERE indrelid = '"#{table_name}"'::regclass AND indisprimary = 'f'
+    SQL
+    assert result.first, "Missing index on #{table_name}"
   end
 
   def assert_foreign_key(table_name)
