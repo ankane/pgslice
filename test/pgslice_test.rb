@@ -74,7 +74,13 @@ class PgSliceTest < Minitest::Test
 
     run_command "fill Posts"
     run_command "analyze Posts"
+
     run_command "swap Posts"
+    assert table_exists?("Posts")
+    assert table_exists?("Posts_retired")
+    refute table_exists?("Posts_intermediate")
+    # TODO check sequence ownership
+
     run_command "fill Posts --swapped"
     run_command "add_partitions Posts --future 3"
     days = case period
@@ -118,8 +124,17 @@ class PgSliceTest < Minitest::Test
     assert_column partition_name, "updatedAt"
 
     run_command "analyze Posts --swapped"
+
     run_command "unswap Posts"
+    assert table_exists?("Posts")
+    assert table_exists?("Posts_intermediate")
+    refute table_exists?("Posts_retired")
+    # TODO check sequence ownership
+
     run_command "unprep Posts"
+    assert table_exists?("Posts")
+    refute table_exists?("Posts_intermediate")
+
     assert true
   end
 
@@ -144,6 +159,14 @@ class PgSliceTest < Minitest::Test
 
   def assert_column(table, column)
     assert ($conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first || {}).key?(column), "Missing column #{column} on #{table}"
+  end
+
+  def table_exists?(table_name)
+    result = $conn.exec <<~SQL
+      SELECT * FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = '#{table_name}'
+    SQL
+    result.any?
   end
 
   def primary_key(table_name)
