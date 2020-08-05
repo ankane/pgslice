@@ -75,7 +75,7 @@ class PgSliceTest < Minitest::Test
 
     declarative = server_version_num >= 100000 && !trigger_based
 
-    if declarative
+    if declarative && !add_pk_to_parent
       refute_primary_key "Posts_intermediate"
     else
       assert_primary_key "Posts_intermediate"
@@ -214,7 +214,7 @@ class PgSliceTest < Minitest::Test
 
   def assert_primary_key(table_name)
     result = primary_key(table_name)
-    assert_match "PRIMARY KEY (\"Id\")", result["def"]
+    assert_match /PRIMARY\ KEY\ \("Id/, result["def"]
   end
 
   def refute_primary_key(table_name)
