@@ -71,7 +71,22 @@ CREATE TABLE #{quote_table(partition)}
           SQL
         end
 
-        queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any? && !partition.primary_key.any?
+        queries << <<~SQL if primary_key.any?
+          DO $$
+            BEGIN
+              BEGIN
+                ALTER TABLE #{quote_table(partition)}
+                  ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});
+              EXCEPTION
+                  WHEN invalid_table_definition THEN
+                    BEGIN
+                      ALTER TABLE #{quote_table(partition)}
+                        ADD UNIQUE (#{primary_key.map { |k| quote_ident(k) }.join(", ")});
+                    END;
+              END;
+            END;
+           $$
+           SQL
 
         index_defs.each do |index_def|
           queries << make_index_def(index_def, partition)

@@ -41,13 +41,24 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, column: "createdAtTz"
   end
 
+  def test_day_with_primary_key
+    assert_period( "day", add_pk_to_parent: true )
+  end
+
   private
 
-  def assert_period(period, column: "createdAt", trigger_based: false)
+  def assert_period(period, column: "createdAt", trigger_based: false, add_pk_to_parent: false)
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
     assert table_exists?("Posts_intermediate")
 
+    if add_pk_to_parent
+      $conn.exec <<~SQL
+      alter table "Posts_intermediate" add primary key ("Id","#{column}")
+      SQL
+    end
+
     run_command "add_partitions Posts --intermediate --past 1 --future 1"
+
     now = Time.now.utc
     time_format = case period
       when "day"
