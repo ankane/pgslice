@@ -42,7 +42,9 @@ class PgSliceTest < Minitest::Test
   end
 
   def test_day_with_primary_key
-    assert_period( "day", add_pk_to_parent: true )
+    if server_version_num >= 110000
+      assert_period( "day", add_pk_to_parent: true )
+    end
   end
 
   private
