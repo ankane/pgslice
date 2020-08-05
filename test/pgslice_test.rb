@@ -135,6 +135,7 @@ class PgSliceTest < Minitest::Test
     add_column "Posts", "updatedAt"
     assert_column "Posts", "updatedAt"
     assert_column partition_name, "updatedAt"
+    assert_column new_partition_name, "updatedAt"
 
     run_command "analyze Posts --swapped"
 
@@ -175,7 +176,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def assert_column(table, column)
-    assert ($conn.exec("SELECT * FROM \"#{table}\" LIMIT 1").first || {}).key?(column), "Missing column #{column} on #{table}"
+    assert_includes $conn.exec("SELECT * FROM \"#{table}\" LIMIT 0").fields, column
   end
 
   def table_exists?(table_name)
