@@ -1,6 +1,10 @@
 require_relative "test_helper"
 
 class PgSliceTest < Minitest::Test
+  def setup
+    $conn.exec File.read("test/support/schema.sql")
+  end
+
   def test_day
     assert_period "day"
   end
@@ -72,8 +76,12 @@ class PgSliceTest < Minitest::Test
       assert_index "Posts_intermediate"
     end
 
-    # TODO test
+    assert_equal 0, $conn.exec('SELECT COUNT(*) FROM "Posts_intermediate"').first["count"].to_i
     run_command "fill Posts"
+    assert_equal 10000, $conn.exec('SELECT COUNT(*) FROM "Posts_intermediate"').first["count"].to_i
+
+    # insert into old table
+    $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
 
     run_command "analyze Posts"
 
@@ -83,8 +91,10 @@ class PgSliceTest < Minitest::Test
     assert table_exists?("Posts_retired")
     refute table_exists?("Posts_intermediate")
 
-    # TODO test
+    assert_equal 10000, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
     run_command "fill Posts --swapped"
+    assert_equal 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
+
     run_command "add_partitions Posts --future 3"
     days = case period
       when "day"
@@ -104,7 +114,7 @@ class PgSliceTest < Minitest::Test
     if declarative
       assert insert_result["Id"]
     else
-      assert_equal 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
+      assert_equal 10002, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
       assert_equal 0, $conn.exec('SELECT COUNT(*) FROM ONLY "Posts"').first["count"].to_i
       assert_nil insert_result
     end
