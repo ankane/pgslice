@@ -31,7 +31,6 @@ class PgSliceTest < Minitest::Test
     run_command "swap Posts"
     run_command "unswap Posts"
     run_command "unprep Posts"
-    assert true
   end
 
   def test_trigger_based
@@ -46,8 +45,9 @@ class PgSliceTest < Minitest::Test
 
   def assert_period(period, column: "createdAt", trigger_based: false)
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
-    run_command "add_partitions Posts --intermediate --past 1 --future 1"
+    assert table_exists?("Posts_intermediate")
 
+    run_command "add_partitions Posts --intermediate --past 1 --future 1"
     now = Time.now.utc
     time_format = case period
       when "day"
@@ -152,8 +152,6 @@ class PgSliceTest < Minitest::Test
     refute table_exists?("Posts_intermediate")
     refute table_exists?(partition_name)
     refute table_exists?(new_partition_name)
-
-    assert true
   end
 
   def run_command(command)
