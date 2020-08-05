@@ -76,9 +76,9 @@ class PgSliceTest < Minitest::Test
       assert_index "Posts_intermediate"
     end
 
-    assert_equal 0, $conn.exec('SELECT COUNT(*) FROM "Posts_intermediate"').first["count"].to_i
+    assert_equal 0, count("Posts_intermediate")
     run_command "fill Posts"
-    assert_equal 10000, $conn.exec('SELECT COUNT(*) FROM "Posts_intermediate"').first["count"].to_i
+    assert_equal 10000, count("Posts_intermediate")
 
     # insert into old table
     $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
@@ -91,9 +91,9 @@ class PgSliceTest < Minitest::Test
     assert table_exists?("Posts_retired")
     refute table_exists?("Posts_intermediate")
 
-    assert_equal 10000, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
+    assert_equal 10000, count("Posts")
     run_command "fill Posts --swapped"
-    assert_equal 10001, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
+    assert_equal 10001, count("Posts")
 
     run_command "add_partitions Posts --future 3"
     days = case period
@@ -114,8 +114,8 @@ class PgSliceTest < Minitest::Test
     if declarative
       assert insert_result["Id"]
     else
-      assert_equal 10002, $conn.exec('SELECT COUNT(*) FROM "Posts"').first["count"].to_i
-      assert_equal 0, $conn.exec('SELECT COUNT(*) FROM ONLY "Posts"').first["count"].to_i
+      assert_equal 10002, count("Posts")
+      assert_equal 0, count("Posts", only: true)
       assert_nil insert_result
     end
 
@@ -184,6 +184,13 @@ class PgSliceTest < Minitest::Test
       WHERE table_schema = 'public' AND table_name = '#{table_name}'
     SQL
     result.any?
+  end
+
+  def count(table_name, only: false)
+    result = $conn.exec <<~SQL
+      SELECT COUNT(*) FROM #{only ? "ONLY " : ""}"#{table_name}"
+    SQL
+    result.first["count"].to_i
   end
 
   def primary_key(table_name)
