@@ -86,7 +86,8 @@ class PgSliceTest < Minitest::Test
     run_command "analyze Posts"
 
     # TODO check sequence ownership
-    run_command "swap Posts"
+    output = run_command "swap Posts"
+    assert_match "lock_timeout", output
     assert table_exists?("Posts")
     assert table_exists?("Posts_retired")
     refute table_exists?("Posts_intermediate")
@@ -167,6 +168,7 @@ class PgSliceTest < Minitest::Test
       puts stdout
       puts
     end
+    stdout
   end
 
   def add_column(table, column)
