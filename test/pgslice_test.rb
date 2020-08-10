@@ -111,12 +111,12 @@ class PgSliceTest < Minitest::Test
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
+    assert_equal 10002, count("Posts")
     if declarative
       assert insert_result["Id"]
     else
-      assert_equal 10002, count("Posts")
-      assert_equal 0, count("Posts", only: true)
       assert_nil insert_result
+      assert_equal 0, count("Posts", only: true)
     end
 
     # test insert with null field
