@@ -27,10 +27,22 @@ class PgSliceTest < Minitest::Test
 
   def test_no_partition
     run_command "prep Posts --no-partition"
+    assert table_exists?("Posts_intermediate")
+    assert_equal 0, count("Posts_intermediate")
+
     run_command "fill Posts"
+    assert_equal 10000, count("Posts_intermediate")
+
     run_command "swap Posts"
+    assert !table_exists?("Posts_intermediate")
+    assert table_exists?("Posts_retired")
+
     run_command "unswap Posts"
+    assert table_exists?("Posts_intermediate")
+    assert !table_exists?("Posts_retired")
+
     run_command "unprep Posts"
+    assert !table_exists?("Posts_intermediate")
   end
 
   def test_trigger_based
