@@ -1,7 +1,7 @@
-## 0.4.7 (unreleased)
+## 0.4.7 (2020-08-14)
 
+- Added `--tablespace` option to `add_partitions`
 - Fixed sequence query if sequence in different schema than table
-- Added `--tablespace` option to `prep`
 
 ## 0.4.6 (2020-05-29)
 
