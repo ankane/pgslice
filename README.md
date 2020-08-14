@@ -246,7 +246,7 @@ pgslice unswap <table>
 Set the tablespace when adding partitions
 
 ```sh
-pgslice add_partitions --tablespace fastspace
+pgslice add_partitions <table> --tablespace fastspace
 ```
 
 ## App Considerations
