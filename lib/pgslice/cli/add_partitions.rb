@@ -4,7 +4,7 @@ module PgSlice
     option :intermediate, type: :boolean, default: false, desc: "Add to intermediate table"
     option :past, type: :numeric, default: 0, desc: "Number of past partitions to add"
     option :future, type: :numeric, default: 0, desc: "Number of future partitions to add"
-    option :tablespace, type: :string, default: '', desc: "The tablespace that the partitions will be stored"
+    option :tablespace, type: :string, default: "", desc: "The tablespace that the partitions will be stored"
     def add_partitions(table)
       original_table = create_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
@@ -63,14 +63,13 @@ module PgSlice
 
         if declarative
           queries << <<-SQL
-CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace.empty? ? '' : ' TABLESPACE ' + quote_ident(tablespace)};
+CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace.empty? ? "" : " TABLESPACE " + quote_ident(tablespace)};
           SQL
         else
           queries << <<-SQL
 CREATE TABLE #{quote_table(partition)}
     (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
-    INHERITS (#{quote_table(table)})
-    #{tablespace.empty? ? '' : 'TABLESPACE ' + quote_ident(tablespace)};
+    INHERITS (#{quote_table(table)})#{tablespace.empty? ? "" : " TABLESPACE " + quote_ident(tablespace)};
           SQL
         end
 

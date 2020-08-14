@@ -1,6 +1,7 @@
 ## 0.4.7 (unreleased)
 
 - Fixed sequence query if sequence in different schema than table
+- Added `--tablespace` option to `prep`
 
 ## 0.4.6 (2020-05-29)
 

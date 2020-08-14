@@ -53,13 +53,21 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, column: "createdAtTz"
   end
 
+  def test_tablespace
+    assert_period "day", tablespace: true
+  end
+
+  def test_tablespace_trigger_based
+    assert_period "month", trigger_based: true, tablespace: true
+  end
+
   private
 
-  def assert_period(period, column: "createdAt", trigger_based: false)
+  def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false)
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
     assert table_exists?("Posts_intermediate")
 
-    run_command "add_partitions Posts --intermediate --past 1 --future 1"
+    run_command "add_partitions Posts --intermediate --past 1 --future 1 #{"--tablespace pg_default" if tablespace}"
     now = Time.now.utc
     time_format = case period
       when "day"
