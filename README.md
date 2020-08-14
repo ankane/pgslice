@@ -241,6 +241,14 @@ To undo swap, use:
 pgslice unswap <table>
 ```
 
+## Additional Options
+
+Set the tablespace when adding partitions
+
+```sh
+pgslice add_partitions --tablespace fastspace
+```
+
 ## App Considerations
 
 This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
