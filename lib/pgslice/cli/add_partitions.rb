@@ -52,6 +52,7 @@ module PgSlice
       end
 
       primary_key = schema_table.primary_key
+      tablespace_str = tablespace.empty? ? "" : " TABLESPACE #{quote_ident(tablespace)}"
 
       added_partitions = []
       range.each do |n|
@@ -63,13 +64,13 @@ module PgSlice
 
         if declarative
           queries << <<-SQL
-CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace.empty? ? "" : " TABLESPACE " + quote_ident(tablespace)};
+CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace_str};
           SQL
         else
           queries << <<-SQL
 CREATE TABLE #{quote_table(partition)}
     (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
-    INHERITS (#{quote_table(table)})#{tablespace.empty? ? "" : " TABLESPACE " + quote_ident(tablespace)};
+    INHERITS (#{quote_table(table)})#{tablespace_str};
           SQL
         end
 
