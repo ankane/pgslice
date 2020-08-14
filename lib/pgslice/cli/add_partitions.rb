@@ -4,7 +4,7 @@ module PgSlice
     option :intermediate, type: :boolean, default: false, desc: "Add to intermediate table"
     option :past, type: :numeric, default: 0, desc: "Number of past partitions to add"
     option :future, type: :numeric, default: 0, desc: "Number of future partitions to add"
-    option :tablespace, type: :string, default: "", desc: "The tablespace that the partitions will be stored"
+    option :tablespace, type: :string, default: "", desc: "Tablespace to use"
     def add_partitions(table)
       original_table = create_table(table)
       table = options[:intermediate] ? original_table.intermediate_table : original_table
