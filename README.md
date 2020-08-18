@@ -227,6 +227,15 @@ If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://
 s3cmd put <table>_201809.dump s3://<s3-bucket>/<table>_201809.dump
 ```
 
+## Schema Updates
+
+Once a table is partitioned, make schema updates on the master table only (not partitions). This includes adding, removing, and modifying columns, as well as adding and removing indexes and foreign keys.
+
+A few exceptions are:
+
+- For Postgres 10, make index and foreign key updates on partitions only
+- For Postgres < 10, make index and foreign key updates on the master table and all partitions
+
 ## Additional Commands
 
 To undo prep (which will delete partitions), use:
@@ -248,15 +257,6 @@ Set the tablespace when adding partitions
 ```sh
 pgslice add_partitions <table> --tablespace fastspace
 ```
-
-## Schema Updates
-
-Once a table is partitioned, make schema updates on the master table only (not partitions). This includes adding, removing, and modifying columns, as well as adding and removing indexes and foreign keys.
-
-A few exceptions are:
-
-- For Postgres 10, make index and foreign key updates on partitions only
-- For Postgres < 10, make index and foreign key updates on the master table and all partitions
 
 ## App Considerations
 
