@@ -249,6 +249,15 @@ Set the tablespace when adding partitions
 pgslice add_partitions <table> --tablespace fastspace
 ```
 
+## Schema Updates
+
+Once a table is partitioned, make schema updates on the master table only (not partitions). This includes adding, removing, and modifying columns, as well as adding and removing indexes and foreign keys.
+
+A few exceptions are:
+
+- For Postgres 10, make index and foreign key updates on partitions only
+- For Postgres < 10, make index and foreign key updates on the master table and all partitions
+
 ## App Considerations
 
 This set up allows you to read and write with the original table name with no knowledge it’s partitioned. However, there are a few things to be aware of.
@@ -314,18 +323,6 @@ pgslice prep <table> --no-partition
 pgslice fill <table> --where "id > 1000" # use any conditions
 pgslice swap <table>
 ```
-
-## Schema Updates
-
-Once a table is partitioned, here’s how to change the schema:
-
-To add, remove, or modify a column, make the update on the master table only.
-
-To add or remove an index or foreign key:
-
-- For Postgres 11+, make the update on the master table only.
-- For Postgres 10, make the update on partitions only.
-- For Postgres < 10, make the update on the master table and all partitions.
 
 ## Declarative Partitioning
 
