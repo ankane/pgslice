@@ -2,9 +2,11 @@ module PgSlice
   module Helpers
     SQL_FORMAT = {
       day: "YYYYMMDD",
+      week: "YYYYWW",
       month: "YYYYMM",
       year: "YYYY"
-    }
+    }.freeze
+    DAYS_IN_WEEK = 7
 
     protected
 
@@ -105,6 +107,8 @@ module PgSlice
       case period.to_sym
       when :day
         "%Y%m%d"
+      when :week
+        "%G%V"
       when :month
         "%Y%m"
       else
@@ -121,6 +125,9 @@ module PgSlice
       case period.to_sym
       when :day
         date
+      when :week
+        now = Date.today
+        now - (now.wday - 1) % 7
       when :month
         Date.new(date.year, date.month)
       else
@@ -141,6 +148,8 @@ module PgSlice
       case period.to_sym
       when :day
         date.next_day(count)
+      when :week
+        date + (count * DAYS_IN_WEEK)
       when :month
         date.next_month(count)
       else
