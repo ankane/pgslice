@@ -324,6 +324,10 @@ pgslice fill <table> --where "id > 1000" # use any conditions
 pgslice swap <table>
 ```
 
+## Triggers
+
+Triggers aren’t copied from the original table. You can set up triggers on the intermediate table if needed. Note that Postgres doesn’t support `BEFORE / FOR EACH ROW` triggers on partitioned tables.
+
 ## Declarative Partitioning
 
 Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected. If you prefer to use trigger-based partitioning instead (not recommended), pass the `--trigger-based` option to the `prep` command.
