@@ -4,7 +4,7 @@ Postgres partitioning as easy as pie. Works great for both new and existing tabl
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
 
-[![Build Status](https://travis-ci.org/ankane/pgslice.svg?branch=master)](https://travis-ci.org/ankane/pgslice)
+[![Build Status](https://github.com/ankane/pgslice/workflows/build/badge.svg?branch=master)](https://github.com/ankane/pgslice/actions)
 
 ## Install
 

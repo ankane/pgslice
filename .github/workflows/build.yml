@@ -1,0 +1,31 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - ruby: 2.7
+          postgres: 13
+        - ruby: 2.7
+          postgres: 12
+        - ruby: 2.6
+          postgres: 11
+        - ruby: 2.5
+          postgres: 10
+        - ruby: 2.4
+          postgres: 9.6
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler-cache: true
+    - uses: ankane/setup-postgres@v1
+      with:
+        postgres-version: ${{ matrix.postgres }}
+    - run: createdb pgslice_test
+    - run: bundle exec rake test
