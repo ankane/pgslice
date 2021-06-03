@@ -16,7 +16,7 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
-    - uses: ankane/setup-postgres@v1
+    - uses: ankane/setup-postgres@pg14
       with:
         postgres-version: ${{ matrix.postgres }}
     - run: createdb pgslice_test
