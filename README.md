@@ -50,7 +50,7 @@ This will give you the `pgslice` command. If installation fails, you may need to
   pgslice fill <table>
   ```
 
-  Use the `--batch-size` and `--sleep` options to control the speed.
+  Use the `--batch-size` and `--sleep` options to control the speed. Defaults to `10000` and `none` respectively
 
   To sync data across different databases, check out [pgsync](https://github.com/ankane/pgsync).
 
