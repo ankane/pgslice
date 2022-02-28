@@ -1,6 +1,7 @@
 ## 0.4.8 (unreleased)
 
 - Fixed error with pg 1.3
+- Reduced size of Docker image
 
 ## 0.4.7 (2020-08-14)
 
