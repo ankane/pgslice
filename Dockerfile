@@ -1,4 +1,4 @@
-FROM ruby:2.7.1-alpine3.11
+FROM ruby:3.1.1-alpine3.15
 
 MAINTAINER Andrew Kane <andrew@chartkick.com>
 
