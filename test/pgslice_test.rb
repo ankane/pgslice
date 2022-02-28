@@ -183,11 +183,11 @@ class PgSliceTest < Minitest::Test
     stdout, stderr = capture_io do
       PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
     end
-    assert_equal "", stderr
     if verbose?
       puts stdout
       puts
     end
+    assert_equal "", stderr
     stdout
   end
 
