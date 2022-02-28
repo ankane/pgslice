@@ -33,7 +33,7 @@ module PgSlice
         params = CGI.parse(uri.query.to_s)
         # remove schema
         @schema = Array(params.delete("schema") || "public")[0]
-        uri.query = URI.encode_www_form(params)
+        uri.query = params.any? ? URI.encode_www_form(params) : nil
 
         ENV["PGCONNECT_TIMEOUT"] ||= "1"
         conn = PG::Connection.new(uri.to_s)
