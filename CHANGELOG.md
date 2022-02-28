@@ -1,4 +1,4 @@
-## 0.4.8 (unreleased)
+## 0.4.8 (2022-02-28)
 
 - Fixed error with pg 1.3
 - Reduced size of Docker image
