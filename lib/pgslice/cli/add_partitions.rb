@@ -46,12 +46,13 @@ module PgSlice
       if version < 3
         index_defs = schema_table.index_defs
         fk_defs = schema_table.foreign_keys
+        primary_key = schema_table.primary_key
       else
         index_defs = []
         fk_defs = []
+        primary_key = []
       end
 
-      primary_key = schema_table.primary_key
       tablespace_str = tablespace.empty? ? "" : " TABLESPACE #{quote_ident(tablespace)}"
 
       added_partitions = []
