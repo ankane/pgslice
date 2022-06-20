@@ -118,7 +118,7 @@ ALTER TABLE "public"."visits_202109" ADD PRIMARY KEY ("id");
 
 CREATE TABLE "public"."visits_202110" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2021-10-01') TO ('2021-11-01');
 
-ALTER TABLE "public"."visits_202108" ADD PRIMARY KEY ("id");
+ALTER TABLE "public"."visits_202110" ADD PRIMARY KEY ("id");
 
 COMMIT;
 ```
