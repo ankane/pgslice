@@ -351,7 +351,7 @@ If installation fails, your system may be missing Ruby or libpq.
 On Mac, run:
 
 ```sh
-brew install postgresql
+brew install libpq
 ```
 
 On Ubuntu, run:
