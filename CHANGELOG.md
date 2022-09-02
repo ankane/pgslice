@@ -1,3 +1,7 @@
+## 0.5.0 (unreleased)
+
+- Dropped support for Ruby < 2.5
+
 ## 0.4.8 (2022-02-28)
 
 - Fixed error with pg 1.3
