@@ -14,7 +14,7 @@ pgslice is a command line tool. To install, run:
 gem install pgslice
 ```
 
-This will give you the `pgslice` command. You can also install it with [Homebrew](#homebrew). If installation fails, you may need to install [dependencies](#dependencies).
+This will give you the `pgslice` command. You can also install it with [Homebrew](#homebrew) or [Docker](#docker). If installation fails, you may need to install [dependencies](#dependencies).
 
 ## Steps
 
@@ -336,13 +336,26 @@ Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/doc
 
 Always make sure your [connection is secure](https://ankane.org/postgres-sslmode-explained) when connecting to a database over a network you don’t fully trust. Your best option is to connect over SSH or a VPN. Another option is to use `sslmode=verify-full`. If you don’t do this, your database credentials can be compromised.
 
-## Homebrew
+## Additional Installation Methods
 
-On Mac, you can use:
+### Homebrew
+
+With Homebrew, you can use:
 
 ```sh
 brew install ankane/brew/pgslice
 ```
+
+### Docker
+
+Get the [Docker image](https://hub.docker.com/r/ankane/pgslice) with:
+
+```sh
+docker pull ankane/pgslice
+alias pgslice="docker run --rm -e PGSLICE_URL ankane/pgslice"
+```
+
+This will give you the `pgslice` command.
 
 ## Dependencies
 
@@ -374,15 +387,6 @@ To use master, run:
 gem install specific_install
 gem specific_install https://github.com/ankane/pgslice.git
 ```
-
-## Docker
-
-```sh
-docker build -t pgslice .
-alias pgslice="docker run --rm -e PGSLICE_URL pgslice"
-```
-
-This will give you the `pgslice` command.
 
 ## Reference
 
