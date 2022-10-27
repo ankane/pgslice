@@ -39,7 +39,7 @@ module PgSlice
         elsif options[:intermediate]
           original_table
         else
-          table.partitions.last
+          table.partitions.last || table # fall back to table if there aren't any partitions yet
         end
 
       # indexes automatically propagate in Postgres 11+
