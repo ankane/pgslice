@@ -57,7 +57,7 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         # add comment
         cast = table.column_cast(column)
         queries << <<-SQL
-COMMENT ON TABLE #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast},version:#{version}';
+COMMENT ON TABLE #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast},version:#{version}';
         SQL
       else
         queries << <<-SQL
@@ -87,7 +87,7 @@ CREATE TRIGGER #{quote_ident(trigger_name)}
 
         cast = table.column_cast(column)
         queries << <<-SQL
-COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} is 'column:#{column},period:#{period},cast:#{cast}';
+COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast}';
         SQL
       end
 
