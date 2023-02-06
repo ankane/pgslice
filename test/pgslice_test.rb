@@ -18,7 +18,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def test_date
-    assert_period "year", column: "createdAt"
+    assert_period "year", column: "createdOn"
   end
 
   def test_timestamptz
