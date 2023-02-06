@@ -32,9 +32,9 @@ This will give you the `pgslice` command. You can also install it with [Homebrew
   pgslice prep <table> <column> <period>
   ```
 
-  Period can be `day`, `month`, or `year`.
+  The column should be a `timestamp`, `timestamptz`, or `date` column and period can be `day`, `month`, or `year`.
 
-  This creates a partitioned table named `<table>_intermediate`.
+  This creates a partitioned table named `<table>_intermediate` using range partitioning.
 
 4. Add partitions to the intermediate table
 
@@ -275,7 +275,7 @@ WHERE
     created_at >= '2021-09-01' AND created_at < '2021-09-02'
 ```
 
-For this to be effective, ensure `constraint_exclusion` is set to `partition` (default value) or `on`.
+For this to be effective, ensure `constraint_exclusion` is set to `partition` (the default value) or `on`.
 
 ```sql
 SHOW constraint_exclusion;
@@ -286,7 +286,7 @@ SHOW constraint_exclusion;
 Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
 
 1. Insert directly into the partition
-2. Get value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
+2. Get the value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
 
 ## Frameworks
 
