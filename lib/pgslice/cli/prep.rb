@@ -46,7 +46,12 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
         if version == 3
           index_defs = table.index_defs
           index_defs.each do |index_def|
-            queries << make_index_def(index_def, intermediate_table)
+            index_sql = make_index_def(index_def, intermediate_table)
+            if ENV['PGSLICE_IGNORE_UNIQ_INDEXES'] && index_sql.include?('CREATE UNIQUE INDEX')
+              puts "WARNING: Unique index ignored, try adding it manually: #{index_sql}"
+            else
+              queries << index_sql
+            end
           end
 
           table.foreign_keys.each do |fk_def|
