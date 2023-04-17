@@ -69,7 +69,7 @@ class PgSliceTest < Minitest::Test
       $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
     end
 
-    if server_version_num >= 120000
+    if server_version_num >= 120000 && !trigger_based
       $conn.exec('ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED')
     end
 
