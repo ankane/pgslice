@@ -40,7 +40,7 @@ module PgSlice
 
       if declarative && options[:partition]
         version_specific_including =
-          if server_version_num >= 130000
+          if server_version_num >= 140000
             " INCLUDING COMPRESSION"
           else
             ""
