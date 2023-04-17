@@ -64,7 +64,8 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false)
-    if server_version_num >= 100000
+    supports_statistics = server_version_num >= 100000
+    if supports_statistics
       $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
     end
 
@@ -137,7 +138,7 @@ class PgSliceTest < Minitest::Test
     assert_primary_key new_partition_name
     assert_index new_partition_name
     assert_foreign_key new_partition_name
-    assert_statistics new_partition_name
+    assert_statistics new_partition_name if supports_statistics
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first

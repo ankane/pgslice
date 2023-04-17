@@ -108,7 +108,7 @@ CREATE TABLE #{quote_table(partition)}
           day = partition_date(partition, name_format)
 
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
-              INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
+              INSERT INTO #{quote_table(partition)} VALUES (#{schema_table.columns.map { |v| "NEW.#{quote_ident(v) }" }.join(", ")});"
 
           if day.to_date < today
             past_defs << sql
