@@ -64,8 +64,7 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false)
-    supports_statistics = server_version_num >= 100000
-    if supports_statistics
+    if server_version_num >= 100000
       $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
     end
 
@@ -138,7 +137,6 @@ class PgSliceTest < Minitest::Test
     assert_primary_key new_partition_name
     assert_index new_partition_name
     assert_foreign_key new_partition_name
-    assert_statistics new_partition_name if supports_statistics
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
@@ -169,6 +167,7 @@ class PgSliceTest < Minitest::Test
     assert_column new_partition_name, "updatedAt"
 
     run_command "analyze Posts --swapped"
+    assert_statistics "Posts" if server_version_num >= 120000
 
     # TODO check sequence ownership
     run_command "unswap Posts"
@@ -270,11 +269,12 @@ class PgSliceTest < Minitest::Test
 
   def assert_statistics(table_name)
     result = $conn.exec <<~SQL
-      SELECT pg_get_statisticsobjdef(oid) AS def
-      FROM pg_statistic_ext
-      WHERE stxrelid = '"#{table_name}"'::regclass
+      SELECT n_distinct
+      FROM pg_stats_ext
+      WHERE tablename = '#{table_name}'
     SQL
     assert result.any?, "Missing extended statistics on #{table_name}"
+    assert_equal '{"1, 2": 10002}', result.first["n_distinct"]
   end
 
   def server_version_num

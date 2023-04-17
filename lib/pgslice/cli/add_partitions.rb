@@ -51,13 +51,6 @@ module PgSlice
         fk_defs = []
       end
 
-      stat_defs =
-        if server_version_num >= 100000
-          schema_table.stat_defs
-        else
-          []
-        end
-
       primary_key = schema_table.primary_key
       tablespace_str = tablespace.empty? ? "" : " TABLESPACE #{quote_ident(tablespace)}"
 
@@ -89,10 +82,6 @@ CREATE TABLE #{quote_table(partition)}
 
         fk_defs.each do |fk_def|
           queries << make_fk_def(fk_def, partition)
-        end
-
-        stat_defs.each do |stat_def|
-          queries << make_stat_def(stat_def, partition)
         end
       end
 
