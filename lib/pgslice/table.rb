@@ -16,7 +16,7 @@ module PgSlice
     end
 
     def columns
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2", [schema, name]).map{ |r| r["column_name"] }
+      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND is_generated = 'NEVER'", [schema, name]).map{ |r| r["column_name"] }
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL

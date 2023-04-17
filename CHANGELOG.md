@@ -1,7 +1,8 @@
 ## 0.6.0 (unreleased)
 
+- Added support for generated columns
 - Added support for extended statistics
-- Added generated columns and compression to `prep`
+- Added compression to `prep`
 - Dropped support for Ruby < 2.7
 
 ## 0.5.0 (2023-01-29)
