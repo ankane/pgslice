@@ -72,6 +72,10 @@ module PgSlice
       execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
     end
 
+    def stat_defs
+      execute("SELECT pg_get_statisticsobjdef(oid) FROM pg_statistic_ext WHERE stxrelid = #{regclass}").map { |r| r["pg_get_statisticsobjdef"] }
+    end
+
     def quote_table
       [quote_ident(schema), quote_ident(name)].join(".")
     end
