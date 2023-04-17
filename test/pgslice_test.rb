@@ -137,6 +137,7 @@ class PgSliceTest < Minitest::Test
     assert_primary_key new_partition_name
     assert_index new_partition_name
     assert_foreign_key new_partition_name
+    assert_statistics new_partition_name
 
     # test insert works
     insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
@@ -264,6 +265,15 @@ class PgSliceTest < Minitest::Test
       WHERE contype = 'f' AND conrelid = '"#{table_name}"'::regclass
     SQL
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
+  end
+
+  def assert_statistics(table_name)
+    result = $conn.exec <<~SQL
+      SELECT pg_get_statisticsobjdef(oid) AS def
+      FROM pg_statistic_ext
+      WHERE stxrelid = '"#{table_name}"'::regclass
+    SQL
+    assert result.any?, "Missing extended statistics on #{table_name}"
   end
 
   def server_version_num
