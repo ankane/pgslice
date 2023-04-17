@@ -107,6 +107,10 @@ CREATE TABLE #{quote_table(partition)}
         partitions.each do |partition|
           day = partition_date(partition, name_format)
 
+          # note: does not support generated columns
+          # could support by listing columns
+          # but this would cause new columns to be ignored
+          # until the trigger is updated
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
               INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
 
