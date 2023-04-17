@@ -267,6 +267,11 @@ class PgSliceTest < Minitest::Test
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
   end
 
+  # extended statistics are built on partitioned tables
+  # https://github.com/postgres/postgres/commit/20b9fa308ebf7d4a26ac53804fce1c30f781d60c
+  # (backported to Postgres 10)
+  #
+  # pg_stats_ext view available with Postgres 12+
   def assert_statistics(table_name)
     result = $conn.exec <<~SQL
       SELECT n_distinct
