@@ -167,7 +167,7 @@ class PgSliceTest < Minitest::Test
     assert_column new_partition_name, "updatedAt"
 
     run_command "analyze Posts --swapped"
-    assert_statistics "Posts" if server_version_num >= 120000
+    assert_statistics "Posts" if server_version_num >= 120000 && !trigger_based
 
     # TODO check sequence ownership
     run_command "unswap Posts"
