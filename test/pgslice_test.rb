@@ -64,6 +64,14 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false)
+    if server_version_num >= 100000
+      $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
+    end
+
+    if server_version_num >= 120000
+      $conn.exec('ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED')
+    end
+
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
     assert table_exists?("Posts_intermediate")
 
