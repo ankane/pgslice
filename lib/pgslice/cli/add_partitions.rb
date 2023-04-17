@@ -109,8 +109,7 @@ CREATE TABLE #{quote_table(partition)}
 
           # note: does not support generated columns
           # could support by listing columns
-          # but this would cause new columns to be ignored
-          # until the trigger is updated
+          # but this would cause issues with schema changes
           sql = "(NEW.#{quote_ident(field)} >= #{sql_date(day, cast)} AND NEW.#{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}) THEN
               INSERT INTO #{quote_table(partition)} VALUES (NEW.*);"
 
