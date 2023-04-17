@@ -179,7 +179,7 @@ module PgSlice
 
     def make_stat_def(stat_def, table)
       m = /ON (.+) FROM/.match(stat_def)
-      # doesn't account for duplicate names, but should be fine
+      # errors on duplicate names, but should be rare
       stat_name = "#{table}_#{m[1].split(", ").map { |v| v.gsub(/\W/i, "") }.join("_")}_stat"
       stat_def.sub(/ FROM \S+/, " FROM #{quote_table(table)}").sub(/ STATISTICS .+ ON /, " STATISTICS #{quote_ident(stat_name)} ON ") + ";"
     end
