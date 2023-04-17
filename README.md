@@ -92,7 +92,7 @@ pgslice prep visits created_at month
 ```sql
 BEGIN;
 
-CREATE TABLE "public"."visits_intermediate" (LIKE "public"."visits" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS INCLUDING COMPRESSION) PARTITION BY RANGE ("created_at");
+CREATE TABLE "public"."visits_intermediate" (LIKE "public"."visits" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS) PARTITION BY RANGE ("created_at");
 
 CREATE INDEX ON "public"."visits_intermediate" USING btree ("created_at");
 

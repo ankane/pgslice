@@ -39,8 +39,14 @@ module PgSlice
       declarative = version > 1
 
       if declarative && options[:partition]
+        version_specific_including =
+          if server_version_num >= 130000
+            " INCLUDING COMPRESSION"
+          else
+            ""
+          end
         queries << <<-SQL
-CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS INCLUDING COMPRESSION) PARTITION BY RANGE (#{quote_ident(column)});
+CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING STORAGE INCLUDING COMMENTS#{version_specific_including}) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
 
         if version == 3
