@@ -396,7 +396,7 @@ bundle exec rake test
 To test against different versions of Postgres with Docker, use:
 
 ```sh
-docker run -p=8000:5432 postgres:10
+docker run -p=8000:5432 postgres:14
 TZ=Etc/UTC PGSLICE_URL=postgres://postgres@localhost:8000/postgres bundle exec rake
 ```
 
