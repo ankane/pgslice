@@ -108,17 +108,17 @@ pgslice add_partitions visits --intermediate --past 1 --future 1
 ```sql
 BEGIN;
 
-CREATE TABLE "public"."visits_202108" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2021-08-01') TO ('2021-09-01');
+CREATE TABLE "public"."visits_202208" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2022-08-01') TO ('2022-09-01');
 
-ALTER TABLE "public"."visits_202108" ADD PRIMARY KEY ("id");
+ALTER TABLE "public"."visits_202208" ADD PRIMARY KEY ("id");
 
-CREATE TABLE "public"."visits_202109" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2021-09-01') TO ('2021-10-01');
+CREATE TABLE "public"."visits_202209" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2022-09-01') TO ('2022-10-01');
 
-ALTER TABLE "public"."visits_202109" ADD PRIMARY KEY ("id");
+ALTER TABLE "public"."visits_202209" ADD PRIMARY KEY ("id");
 
-CREATE TABLE "public"."visits_202110" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2021-10-01') TO ('2021-11-01');
+CREATE TABLE "public"."visits_202210" PARTITION OF "public"."visits_intermediate" FOR VALUES FROM ('2022-10-01') TO ('2022-11-01');
 
-ALTER TABLE "public"."visits_202110" ADD PRIMARY KEY ("id");
+ALTER TABLE "public"."visits_202210" ADD PRIMARY KEY ("id");
 
 COMMIT;
 ```
@@ -131,17 +131,17 @@ pgslice fill visits
 /* 1 of 3 */
 INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
     SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
-    WHERE "id" > 0 AND "id" <= 10000 AND "created_at" >= '2021-08-01'::date AND "created_at" < '2021-11-01'::date
+    WHERE "id" > 0 AND "id" <= 10000 AND "created_at" >= '2022-08-01'::date AND "created_at" < '2022-11-01'::date
 
 /* 2 of 3 */
 INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
     SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
-    WHERE "id" > 10000 AND "id" <= 20000 AND "created_at" >= '2021-08-01'::date AND "created_at" < '2021-11-01'::date
+    WHERE "id" > 10000 AND "id" <= 20000 AND "created_at" >= '2022-08-01'::date AND "created_at" < '2022-11-01'::date
 
 /* 3 of 3 */
 INSERT INTO "public"."visits_intermediate" ("id", "user_id", "ip", "created_at")
     SELECT "id", "user_id", "ip", "created_at" FROM "public"."visits"
-    WHERE "id" > 20000 AND "id" <= 30000 AND "created_at" >= '2021-08-01'::date AND "created_at" < '2021-11-01'::date
+    WHERE "id" > 20000 AND "id" <= 30000 AND "created_at" >= '2022-08-01'::date AND "created_at" < '2022-11-01'::date
 ```
 
 ```sh
@@ -149,11 +149,11 @@ pgslice analyze visits
 ```
 
 ```sql
-ANALYZE VERBOSE "public"."visits_202108";
+ANALYZE VERBOSE "public"."visits_202208";
 
-ANALYZE VERBOSE "public"."visits_202109";
+ANALYZE VERBOSE "public"."visits_202209";
 
-ANALYZE VERBOSE "public"."visits_202110";
+ANALYZE VERBOSE "public"."visits_202210";
 
 ANALYZE VERBOSE "public"."visits_intermediate";
 ```
@@ -217,14 +217,14 @@ WHERE
 Back up and drop older partitions each day, month, or year.
 
 ```sh
-pg_dump -c -Fc -t <table>_202301 $PGSLICE_URL > <table>_202301.dump
-psql -c "DROP TABLE <table>_202301" $PGSLICE_URL
+pg_dump -c -Fc -t <table>_202209 $PGSLICE_URL > <table>_202209.dump
+psql -c "DROP TABLE <table>_202209" $PGSLICE_URL
 ```
 
 If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
 
 ```sh
-s3cmd put <table>_202301.dump s3://<s3-bucket>/<table>_202301.dump
+s3cmd put <table>_202209.dump s3://<s3-bucket>/<table>_202209.dump
 ```
 
 ## Schema Updates
