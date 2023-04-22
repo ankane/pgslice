@@ -267,7 +267,7 @@ SELECT * FROM
 WHERE
     user_id = 123 AND
     -- for performance
-    created_at >= '2023-01-01' AND created_at < '2023-01-02'
+    created_at >= '2022-09-01' AND created_at < '2022-09-02'
 ```
 
 For this to be effective, ensure `constraint_exclusion` is set to `partition` (the default value) or `on`.
