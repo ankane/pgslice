@@ -68,9 +68,7 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
-    if server_version_num >= 100000
-      $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
-    end
+    $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
 
     if server_version_num >= 120000 && !trigger_based
       $conn.exec('ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED')
@@ -94,7 +92,7 @@ class PgSliceTest < Minitest::Test
     assert_index partition_name
     assert_foreign_key partition_name
 
-    declarative = server_version_num >= 100000 && !trigger_based
+    declarative = !trigger_based
 
     if declarative
       refute_primary_key "Posts_intermediate"
@@ -171,6 +169,8 @@ class PgSliceTest < Minitest::Test
     assert_column new_partition_name, "updatedAt"
 
     run_command "analyze Posts --swapped"
+
+    # pg_stats_ext view available with Postgres 12+
     assert_statistics "Posts" if server_version_num >= 120000 && !trigger_based
 
     # TODO check sequence ownership
@@ -274,8 +274,6 @@ class PgSliceTest < Minitest::Test
   # extended statistics are built on partitioned tables
   # https://github.com/postgres/postgres/commit/20b9fa308ebf7d4a26ac53804fce1c30f781d60c
   # (backported to Postgres 10)
-  #
-  # pg_stats_ext view available with Postgres 12+
   def assert_statistics(table_name)
     result = $conn.exec <<~SQL
       SELECT n_distinct
