@@ -1,4 +1,4 @@
-## 0.6.0 (unreleased)
+## 0.6.0 (2023-04-22)
 
 - Added support for generated columns
 - Added compression and extended statistics to `prep`
