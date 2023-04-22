@@ -365,7 +365,6 @@ gem specific_install https://github.com/ankane/pgslice.git
 ## Reference
 
 - [PostgreSQL Manual](https://www.postgresql.org/docs/current/static/ddl-partitioning.html)
-- [PostgreSQL Wiki](https://wiki.postgresql.org/wiki/Table_partitioning)
 
 ## Related Projects
 
