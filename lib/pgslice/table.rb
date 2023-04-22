@@ -178,12 +178,16 @@ module PgSlice
       PgSlice::CLI.instance.send(:execute, *args)
     end
 
+    def escape_literal(value)
+      PgSlice::CLI.instance.send(:escape_literal, value)
+    end
+
     def quote_ident(value)
       PG::Connection.quote_ident(value)
     end
 
     def regclass
-      "'#{quote_table}'::regclass"
+      "#{escape_literal(quote_table)}::regclass"
     end
 
     def sql_date(time, cast, add_cast = true)
@@ -192,7 +196,7 @@ module PgSlice
       else
         fmt = "%Y-%m-%d"
       end
-      str = "'#{time.strftime(fmt)}'"
+      str = escape_literal(time.strftime(fmt))
       add_cast ? "#{str}::#{cast}" : str
     end
   end
