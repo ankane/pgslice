@@ -224,7 +224,7 @@ psql -c "DROP TABLE <table>_202301" $PGSLICE_URL
 If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
 
 ```sh
-s3cmd put <table>_202109.dump s3://<s3-bucket>/<table>_202109.dump
+s3cmd put <table>_202301.dump s3://<s3-bucket>/<table>_202301.dump
 ```
 
 ## Schema Updates
