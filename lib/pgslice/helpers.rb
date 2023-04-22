@@ -40,6 +40,10 @@ module PgSlice
         conn.set_notice_processor do |message|
           say message
         end
+        @server_version_num = conn.exec("SHOW server_version_num")[0]["server_version_num"].to_i
+        if @server_version_num < 110000
+          abort "This version of pgslice requires Postgres 11+"
+        end
         conn
       end
     rescue PG::ConnectionBad => e
@@ -86,7 +90,8 @@ module PgSlice
     end
 
     def server_version_num
-      execute("SHOW server_version_num")[0]["server_version_num"].to_i
+      connection # ensure called first
+      @server_version_num
     end
 
     # helpers

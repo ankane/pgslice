@@ -3,6 +3,7 @@
 - Added support for generated columns
 - Added compression and extended statistics to `prep`
 - Dropped support for Ruby < 2.7
+- Dropped support for Postgres < 11
 
 ## 0.5.0 (2023-01-29)
 
