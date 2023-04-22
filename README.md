@@ -400,4 +400,4 @@ docker run -p=8000:5432 postgres:10
 TZ=Etc/UTC PGSLICE_URL=postgres://postgres@localhost:8000/postgres bundle exec rake
 ```
 
-On Mac, you must use [Docker for Mac](https://www.docker.com/docker-mac) for the port mapping to localhost to work.
+On Mac, you must use [Docker Desktop](https://www.docker.com/products/docker-desktop/) for the port mapping to localhost to work.
