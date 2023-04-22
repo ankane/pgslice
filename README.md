@@ -217,8 +217,8 @@ WHERE
 Back up and drop older partitions each day, month, or year.
 
 ```sh
-pg_dump -c -Fc -t <table>_202109 $PGSLICE_URL > <table>_202109.dump
-psql -c "DROP TABLE <table>_202109" $PGSLICE_URL
+pg_dump -c -Fc -t <table>_202301 $PGSLICE_URL > <table>_202301.dump
+psql -c "DROP TABLE <table>_202301" $PGSLICE_URL
 ```
 
 If you use [Amazon S3](https://aws.amazon.com/s3/) for backups, [s3cmd](https://github.com/s3tools/s3cmd) is a nice tool.
@@ -272,7 +272,7 @@ SELECT * FROM
 WHERE
     user_id = 123 AND
     -- for performance
-    created_at >= '2021-09-01' AND created_at < '2021-09-02'
+    created_at >= '2023-01-01' AND created_at < '2023-01-02'
 ```
 
 For this to be effective, ensure `constraint_exclusion` is set to `partition` (the default value) or `on`.
