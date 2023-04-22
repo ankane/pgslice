@@ -53,6 +53,10 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, column: "createdAtTz"
   end
 
+  def test_v2
+    assert_period "month", version: 2
+  end
+
   def test_tablespace
     assert_period "day", tablespace: true
   end
@@ -63,7 +67,7 @@ class PgSliceTest < Minitest::Test
 
   private
 
-  def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false)
+  def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
     if server_version_num >= 100000
       $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
     end
@@ -72,7 +76,7 @@ class PgSliceTest < Minitest::Test
       $conn.exec('ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED')
     end
 
-    run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based}"
+    run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based} #{"--test-version #{version}" if version}"
     assert table_exists?("Posts_intermediate")
 
     run_command "add_partitions Posts --intermediate --past 1 --future 1 #{"--tablespace pg_default" if tablespace}"
@@ -98,7 +102,7 @@ class PgSliceTest < Minitest::Test
       assert_primary_key "Posts_intermediate"
     end
 
-    if declarative && server_version_num < 110000
+    if declarative && version == 2
       refute_index "Posts_intermediate"
     else
       assert_index "Posts_intermediate"

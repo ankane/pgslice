@@ -3,6 +3,7 @@ module PgSlice
     desc "prep TABLE [COLUMN] [PERIOD]", "Create an intermediate table for partitioning"
     option :partition, type: :boolean, default: true, desc: "Partition the table"
     option :trigger_based, type: :boolean, default: false, desc: "Use trigger-based partitioning"
+    option :test_version, type: :numeric, hide: true
     def prep(table, column=nil, period=nil)
       table = create_table(table)
       intermediate_table = table.intermediate_table
@@ -27,7 +28,8 @@ module PgSlice
       # 1. trigger-based
       # 2. declarative, with indexes and foreign keys on child tables
       # 3. declarative, with indexes and foreign keys on parent table
-      version =
+      version = options[:test_version]
+      version ||=
         if options[:trigger_based] || server_version_num < 100000
           1
         elsif server_version_num < 110000
