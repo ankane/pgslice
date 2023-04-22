@@ -35,7 +35,7 @@ module PgSlice
         @schema = Array(params.delete("schema") || "public")[0]
         uri.query = params.any? ? URI.encode_www_form(params) : nil
 
-        ENV["PGCONNECT_TIMEOUT"] ||= "1"
+        ENV["PGCONNECT_TIMEOUT"] ||= "3"
         conn = PG::Connection.new(uri.to_s)
         conn.set_notice_processor do |message|
           say message
