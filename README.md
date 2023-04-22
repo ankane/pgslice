@@ -231,11 +231,6 @@ s3cmd put <table>_202301.dump s3://<s3-bucket>/<table>_202301.dump
 
 Once a table is partitioned, make schema updates on the master table only (not partitions). This includes adding, removing, and modifying columns, as well as adding and removing indexes and foreign keys.
 
-A few exceptions are:
-
-- For Postgres 10, make index and foreign key updates on partitions only
-- For Postgres < 10, make index and foreign key updates on the master table and all partitions
-
 ## Additional Commands
 
 To undo prep (which will delete partitions), use:
@@ -281,32 +276,15 @@ For this to be effective, ensure `constraint_exclusion` is set to `partition` (t
 SHOW constraint_exclusion;
 ```
 
-### Writes
-
-Before Postgres 10, if you use `INSERT` statements with a `RETURNING` clause (as frameworks like Rails do), you’ll no longer receive the id of the newly inserted record(s) back. If you need this, you can either:
-
-1. Insert directly into the partition
-2. Get the value before the insert with `SELECT nextval('sequence_name')` (for multiple rows, append `FROM generate_series(1, n)`)
-
 ## Frameworks
 
 ### Rails
 
-For Postgres 10+, specify the primary key for partitioned models to ensure it’s returned.
+Specify the primary key for partitioned models to ensure it’s returned.
 
 ```ruby
 class Visit < ApplicationRecord
   self.primary_key = "id"
-end
-```
-
-Before Postgres 10, preload the value.
-
-```ruby
-class Visit < ApplicationRecord
-  before_create do
-    self.id ||= self.class.connection.select_all("SELECT nextval('#{self.class.sequence_name}')").first["nextval"]
-  end
 end
 ```
 
@@ -327,10 +305,6 @@ pgslice swap <table>
 ## Triggers
 
 Triggers aren’t copied from the original table. You can set up triggers on the intermediate table if needed. Note that Postgres doesn’t support `BEFORE / FOR EACH ROW` triggers on partitioned tables.
-
-## Declarative Partitioning
-
-Postgres 10 introduces [declarative partitioning](https://www.postgresql.org/docs/10/static/ddl-partitioning.html#ddl-partitioning-declarative). A major benefit is `INSERT` statements with a `RETURNING` clause work as expected. If you prefer to use trigger-based partitioning instead (not recommended), pass the `--trigger-based` option to the `prep` command.
 
 ## Data Protection
 
