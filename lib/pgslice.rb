@@ -5,6 +5,7 @@ require "thor"
 # stdlib
 require "cgi"
 require "time"
+require "uri"
 
 # modules
 require_relative "pgslice/helpers"

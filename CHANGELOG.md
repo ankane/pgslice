@@ -1,3 +1,7 @@
+## 0.6.1 (unreleased)
+
+- Fixed `uninitialized constant` error
+
 ## 0.6.0 (2023-04-22)
 
 - Added support for generated columns
