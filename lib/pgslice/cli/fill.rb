@@ -8,6 +8,7 @@ module PgSlice
     option :start, type: :numeric, desc: "Primary key to start"
     option :where, desc: "Conditions to filter"
     option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
+    option :unique_key, desc: "Column on which to sort the table. This is a substitute to the primary key, and thus must be incremental and unique."
     def fill(table)
       table = create_table(table)
       source_table = create_table(options[:source_table]) if options[:source_table]
@@ -38,7 +39,13 @@ module PgSlice
 
       schema_table = period && declarative ? partitions.last : table
 
-      primary_key = schema_table.primary_key[0]
+      if options['unique_key']
+        abort "Invalid unique_key option given" unless source_table.columns.include?(options['unique_key'])
+        primary_key = options['unique_key']
+      else
+        primary_key = schema_table.primary_key[0]
+      end
+
       abort "No primary key" unless primary_key
 
       max_source_id = nil
