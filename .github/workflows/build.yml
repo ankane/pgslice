@@ -15,10 +15,8 @@ jobs:
             postgres: 14
           - ruby: "3.0"
             postgres: 13
-          - ruby: 2.7
+          - ruby: "3.0"
             postgres: 12
-          - ruby: 2.7
-            postgres: 11
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
