@@ -13,13 +13,12 @@ namespace :docker do
   task :build do
     require_relative "lib/pgslice/version"
 
-    system "docker build --pull --no-cache --platform linux/amd64 -t ankane/pgslice:latest -t ankane/pgslice:v#{PgSlice::VERSION} .", exception: true
+    system "docker build --pull --no-cache -t ankane/pgslice:latest -t ankane/pgslice:v#{PgSlice::VERSION} .", exception: true
   end
 
   task :release do
     require_relative "lib/pgslice/version"
 
-    system "docker push ankane/pgslice:latest", exception: true
-    system "docker push ankane/pgslice:v#{PgSlice::VERSION}", exception: true
+    system "docker buildx build --push --pull --no-cache --platform linux/amd64,linux/arm64 -t ankane/pgslice:latest -t ankane/pgslice:v#{PgSlice::VERSION} .", exception: true
   end
 end
