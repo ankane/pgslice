@@ -79,7 +79,8 @@ class PgSliceTest < Minitest::Test
 
     run_command "add_partitions Posts --intermediate --past 1 --future 1 #{"--tablespace pg_default" if tablespace}"
     now = Time.now.utc
-    time_format = case period
+    time_format =
+      case period
       when "day"
         "%Y%m%d"
       when "month"
@@ -127,7 +128,8 @@ class PgSliceTest < Minitest::Test
     assert_equal 10001, count("Posts")
 
     run_command "add_partitions Posts --future 3"
-    days = case period
+    days =
+      case period
       when "day"
         3
       when "month"

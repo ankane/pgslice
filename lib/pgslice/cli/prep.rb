@@ -4,7 +4,7 @@ module PgSlice
     option :partition, type: :boolean, default: true, desc: "Partition the table"
     option :trigger_based, type: :boolean, default: false, desc: "Use trigger-based partitioning"
     option :test_version, type: :numeric, hide: true
-    def prep(table, column=nil, period=nil)
+    def prep(table, column = nil, period = nil)
       table = create_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
