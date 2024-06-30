@@ -374,6 +374,10 @@ Also check out:
 - [PgHero](https://github.com/ankane/pghero) - A performance dashboard for Postgres
 - [pgsync](https://github.com/ankane/pgsync) - Sync Postgres data to your local machine
 
+## History
+
+View the [changelog](https://github.com/ankane/pgslice/blob/master/CHANGELOG.md)
+
 ## Contributing
 
 Everyone is encouraged to help improve this project. Here are a few ways you can help:
