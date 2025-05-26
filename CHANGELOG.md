@@ -1,6 +1,7 @@
 ## 0.7.0 (unreleased)
 
 - Dropped support for Ruby < 3
+- Dropped support for Postgres < 13
 
 ## 0.6.1 (2023-04-26)
 
