@@ -1,3 +1,7 @@
+## 0.7.0 (unreleased)
+
+- Dropped support for Ruby < 3
+
 ## 0.6.1 (2023-04-26)
 
 - Fixed `uninitialized constant` error
