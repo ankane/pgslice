@@ -41,8 +41,8 @@ module PgSlice
           say message
         end
         @server_version_num = conn.exec("SHOW server_version_num")[0]["server_version_num"].to_i
-        if @server_version_num < 110000
-          abort "This version of pgslice requires Postgres 11+"
+        if @server_version_num < 130000
+          abort "This version of pgslice requires Postgres 13+"
         end
         conn
       end
