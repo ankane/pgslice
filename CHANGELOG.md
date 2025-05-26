@@ -1,4 +1,4 @@
-## 0.7.0 (unreleased)
+## 0.7.0 (2025-05-26)
 
 - Dropped support for Ruby < 3
 - Dropped support for Postgres < 13
