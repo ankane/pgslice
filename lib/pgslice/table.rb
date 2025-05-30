@@ -21,7 +21,7 @@ module PgSlice
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
     def sequences
-      query = <<-SQL
+      query = <<~SQL
         SELECT
           a.attname AS related_column,
           n.nspname AS sequence_schema,
@@ -47,7 +47,7 @@ module PgSlice
     # https://stackoverflow.com/a/20537829
     # TODO can simplify with array_position in Postgres 9.5+
     def primary_key
-      query = <<-SQL
+      query = <<~SQL
         SELECT
           pg_attribute.attname,
           format_type(pg_attribute.atttypid, pg_attribute.atttypmod),
@@ -113,7 +113,7 @@ module PgSlice
 
     # ensure this returns partitions in the correct order
     def partitions
-      query = <<-SQL
+      query = <<~SQL
         SELECT
           nmsp_child.nspname  AS schema,
           child.relname       AS name

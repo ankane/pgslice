@@ -40,8 +40,8 @@ module PgSlice
         if server_version_num >= 140000
           including << "COMPRESSION"
         end
-        queries << <<-SQL
-CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} #{including.map { |v| "INCLUDING #{v}" }.join(" ")}) PARTITION BY RANGE (#{quote_ident(column)});
+        queries << <<~SQL
+          CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} #{including.map { |v| "INCLUDING #{v}" }.join(" ")}) PARTITION BY RANGE (#{quote_ident(column)});
         SQL
 
         if version == 3
@@ -57,12 +57,12 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} #{in
 
         # add comment
         cast = table.column_cast(column)
-        queries << <<-SQL
-COMMENT ON TABLE #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast},version:#{version}';
+        queries << <<~SQL
+          COMMENT ON TABLE #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast},version:#{version}';
         SQL
       else
-        queries << <<-SQL
-CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING ALL);
+        queries << <<~SQL
+          CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCLUDING ALL);
         SQL
 
         table.foreign_keys.each do |fk_def|
@@ -71,24 +71,24 @@ CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} INCL
       end
 
       if options[:partition] && !declarative
-        queries << <<-SQL
-CREATE FUNCTION #{quote_ident(trigger_name)}()
-    RETURNS trigger AS $$
-    BEGIN
-        RAISE EXCEPTION 'Create partitions first.';
-    END;
-    $$ LANGUAGE plpgsql;
+        queries << <<~SQL
+          CREATE FUNCTION #{quote_ident(trigger_name)}()
+              RETURNS trigger AS $$
+              BEGIN
+                  RAISE EXCEPTION 'Create partitions first.';
+              END;
+              $$ LANGUAGE plpgsql;
         SQL
 
-        queries << <<-SQL
-CREATE TRIGGER #{quote_ident(trigger_name)}
-    BEFORE INSERT ON #{quote_table(intermediate_table)}
-    FOR EACH ROW EXECUTE PROCEDURE #{quote_ident(trigger_name)}();
+        queries << <<~SQL
+          CREATE TRIGGER #{quote_ident(trigger_name)}
+              BEFORE INSERT ON #{quote_table(intermediate_table)}
+              FOR EACH ROW EXECUTE PROCEDURE #{quote_ident(trigger_name)}();
         SQL
 
         cast = table.column_cast(column)
-        queries << <<-SQL
-COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast}';
+        queries << <<~SQL
+          COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(intermediate_table)} IS 'column:#{column},period:#{period},cast:#{cast}';
         SQL
       end
 

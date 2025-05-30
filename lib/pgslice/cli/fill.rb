@@ -82,11 +82,11 @@ module PgSlice
           where << " AND #{options[:where]}"
         end
 
-        query = <<-SQL
-/* #{i} of #{batch_count} */
-INSERT INTO #{quote_table(dest_table)} (#{fields})
-    SELECT #{fields} FROM #{quote_table(source_table)}
-    WHERE #{where}
+        query = <<~SQL
+          /* #{i} of #{batch_count} */
+          INSERT INTO #{quote_table(dest_table)} (#{fields})
+              SELECT #{fields} FROM #{quote_table(source_table)}
+              WHERE #{where}
         SQL
 
         run_query(query)

@@ -63,14 +63,14 @@ module PgSlice
         added_partitions << partition
 
         if declarative
-          queries << <<-SQL
-CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace_str};
+          queries << <<~SQL
+            CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(table)} FOR VALUES FROM (#{sql_date(day, cast, false)}) TO (#{sql_date(advance_date(day, period, 1), cast, false)})#{tablespace_str};
           SQL
         else
-          queries << <<-SQL
-CREATE TABLE #{quote_table(partition)}
-    (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
-    INHERITS (#{quote_table(table)})#{tablespace_str};
+          queries << <<~SQL
+            CREATE TABLE #{quote_table(partition)}
+                (CHECK (#{quote_ident(field)} >= #{sql_date(day, cast)} AND #{quote_ident(field)} < #{sql_date(advance_date(day, period, 1), cast)}))
+                INHERITS (#{quote_table(table)})#{tablespace_str};
           SQL
         end
 
@@ -115,17 +115,17 @@ CREATE TABLE #{quote_table(partition)}
         trigger_defs = current_defs + future_defs + past_defs.reverse
 
         if trigger_defs.any?
-          queries << <<-SQL
-CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
-    RETURNS trigger AS $$
-    BEGIN
-        IF #{trigger_defs.join("\n        ELSIF ")}
-        ELSE
-            RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
-        END IF;
-        RETURN NULL;
-    END;
-    $$ LANGUAGE plpgsql;
+          queries << <<~SQL
+            CREATE OR REPLACE FUNCTION #{quote_ident(trigger_name)}()
+                RETURNS trigger AS $$
+                BEGIN
+                    IF #{trigger_defs.join("\n        ELSIF ")}
+                    ELSE
+                        RAISE EXCEPTION 'Date out of range. Ensure partitions are created.';
+                    END IF;
+                    RETURN NULL;
+                END;
+                $$ LANGUAGE plpgsql;
           SQL
         end
       end
