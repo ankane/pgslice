@@ -306,7 +306,7 @@ pgslice swap <table>
 
 ## Triggers
 
-Triggers aren’t copied from the original table. You can set up triggers on the intermediate table if needed. Note that Postgres doesn’t support `BEFORE / FOR EACH ROW` triggers on partitioned tables.
+Triggers aren’t copied from the original table. You can set up triggers on the intermediate table if needed.
 
 ## Data Protection
 
