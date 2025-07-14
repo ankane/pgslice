@@ -121,7 +121,7 @@ class PgSliceTest < Minitest::Test
     run_command "analyze Posts"
     last_analyzed = $conn.exec("SELECT relname, EXTRACT(EPOCH FROM NOW() - last_analyze) AS last_analyzed FROM pg_stat_all_tables WHERE relname LIKE 'Posts_%'").to_a
     assert_equal 4, last_analyzed.size
-    assert last_analyzed.all? { |v| v["last_analyzed"].to_f < 0.01 }
+    assert last_analyzed.all? { |v| v["last_analyzed"]&.to_f < 0.01 }
 
     # TODO check sequence ownership
     output = run_command "swap Posts"
