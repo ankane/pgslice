@@ -14,7 +14,9 @@ pgslice is a command line tool. To install, run:
 gem install pgslice
 ```
 
-This will give you the `pgslice` command. You can also install it with [Homebrew](#homebrew) or [Docker](#docker). If installation fails, you may need to install [dependencies](#dependencies).
+This will give you the `pgslice` command. If installation fails, you may need to install [dependencies](#dependencies).
+
+You can also install it with [Homebrew](#homebrew) or [Docker](#docker).
 
 ## Steps
 
@@ -317,7 +319,7 @@ Always make sure your [connection is secure](https://ankane.org/postgres-sslmode
 With Homebrew, you can use:
 
 ```sh
-brew install ankane/brew/pgslice
+brew install pgslice
 ```
 
 ### Docker
