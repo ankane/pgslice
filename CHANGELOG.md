@@ -1,3 +1,7 @@
+## 0.7.1 (unreleased)
+
+- Improved `analyze` for declarative partitioning
+
 ## 0.7.0 (2025-05-26)
 
 - Dropped support for Ruby < 3
