@@ -65,6 +65,10 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, tablespace: true
   end
 
+  def test_prep_missing_table
+    assert_error "Table not found", "prep Items"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
@@ -190,7 +194,11 @@ class PgSliceTest < Minitest::Test
     refute table_exists?(new_partition_name)
   end
 
-  def run_command(command)
+  def assert_error(message, command)
+    run_command command, error: message
+  end
+
+  def run_command(command, error: nil)
     if verbose?
       puts "$ pgslice #{command}"
       puts
@@ -202,7 +210,11 @@ class PgSliceTest < Minitest::Test
       puts stdout
       puts
     end
-    assert_equal "", stderr
+    if error
+      assert_match error, stderr
+    else
+      assert_equal "", stderr
+    end
     stdout
   end
 
