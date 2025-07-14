@@ -225,34 +225,36 @@ class PgSliceTest < Minitest::Test
   end
 
   def add_column(table, column)
-    $conn.exec("ALTER TABLE \"#{table}\" ADD COLUMN \"#{column}\" timestamp")
+    $conn.exec("ALTER TABLE #{quote_ident(table)} ADD COLUMN #{quote_ident(column)} timestamp")
   end
 
   def assert_column(table, column)
-    assert_includes $conn.exec("SELECT * FROM \"#{table}\" LIMIT 0").fields, column
+    assert_includes $conn.exec("SELECT * FROM #{quote_ident(table)} LIMIT 0").fields, column
   end
 
   def table_exists?(table_name)
-    result = $conn.exec <<~SQL
+    sql = <<~SQL
       SELECT * FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = '#{table_name}'
+      WHERE table_schema = 'public' AND table_name = $1
     SQL
+    result = $conn.exec_params(sql, [table_name])
     result.any?
   end
 
   def count(table_name, only: false)
     result = $conn.exec <<~SQL
-      SELECT COUNT(*) FROM #{only ? "ONLY " : ""}"#{table_name}"
+      SELECT COUNT(*) FROM #{only ? "ONLY " : ""}#{quote_ident(table_name)}
     SQL
     result.first["count"].to_i
   end
 
   def primary_key(table_name)
-    result = $conn.exec <<~SQL
+    sql = <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
-      WHERE contype = 'p' AND conrelid = '"#{table_name}"'::regclass
+      WHERE contype = 'p' AND conrelid = $1::regclass
     SQL
+    result = $conn.exec_params(sql, [quote_ident(table_name)])
     result.first
   end
 
@@ -266,11 +268,12 @@ class PgSliceTest < Minitest::Test
   end
 
   def index(table_name)
-    result = $conn.exec <<~SQL
+    sql = <<~SQL
       SELECT pg_get_indexdef(indexrelid)
       FROM pg_index
-      WHERE indrelid = '"#{table_name}"'::regclass AND indisprimary = 'f'
+      WHERE indrelid = $1::regclass AND indisprimary = 'f'
     SQL
+    result = $conn.exec_params(sql, [quote_ident(table_name)])
     result.first
   end
 
@@ -283,11 +286,12 @@ class PgSliceTest < Minitest::Test
   end
 
   def assert_foreign_key(table_name)
-    result = $conn.exec <<~SQL
+    sql = <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
-      WHERE contype = 'f' AND conrelid = '"#{table_name}"'::regclass
+      WHERE contype = 'f' AND conrelid = $1::regclass
     SQL
+    result = $conn.exec_params(sql, [quote_ident(table_name)])
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
   end
 
@@ -295,17 +299,22 @@ class PgSliceTest < Minitest::Test
   # https://github.com/postgres/postgres/commit/20b9fa308ebf7d4a26ac53804fce1c30f781d60c
   # (backported to Postgres 10)
   def assert_statistics(table_name)
-    result = $conn.exec <<~SQL
+    sql = <<~SQL
       SELECT n_distinct
       FROM pg_stats_ext
-      WHERE tablename = '#{table_name}'
+      WHERE tablename = $1
     SQL
+    result = $conn.exec_params(sql, [table_name])
     assert result.any?, "Missing extended statistics on #{table_name}"
     assert_equal '{"1, 2": 10002}', result.first["n_distinct"]
   end
 
   def server_version_num
     $conn.exec("SHOW server_version_num").first["server_version_num"].to_i
+  end
+
+  def quote_ident(value)
+    PG::Connection.quote_ident(value)
   end
 
   def verbose?
