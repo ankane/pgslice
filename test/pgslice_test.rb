@@ -116,7 +116,7 @@ class PgSliceTest < Minitest::Test
     assert_equal 10000, count("Posts_intermediate")
 
     # insert into old table
-    $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
+    $conn.exec_params('INSERT INTO "Posts" (' + quote_ident(column) + ') VALUES ($1) RETURNING "Id"', [now.iso8601]).first
 
     run_command "analyze Posts"
     # https://github.com/postgres/postgres/commit/375aed36ad83f0e021e9bdd3a0034c0c992c66dc
@@ -153,7 +153,7 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key new_partition_name
 
     # test insert works
-    insert_result = $conn.exec('INSERT INTO "Posts" ("' + column + '") VALUES (\'' + now.iso8601 + '\') RETURNING "Id"').first
+    insert_result = $conn.exec_params('INSERT INTO "Posts" (' + quote_ident(column) + ') VALUES ($1) RETURNING "Id"', [now.iso8601]).first
     assert_equal 10002, count("Posts")
     if declarative
       assert insert_result["Id"]
