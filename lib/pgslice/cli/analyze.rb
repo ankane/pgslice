@@ -5,6 +5,7 @@ module PgSlice
     def analyze(table)
       table = create_table(table)
       parent_table = options[:swapped] ? table : table.intermediate_table
+      assert_table(parent_table)
 
       _, _, _, _, declarative, _ = parent_table.fetch_settings(table.trigger_name)
       analyze_list = declarative ? [parent_table] : (parent_table.partitions + [parent_table])

@@ -69,6 +69,30 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "prep Items"
   end
 
+  def test_add_partitions_missing_table
+    assert_error "Table not found", "add_partitions Items"
+  end
+
+  def test_fill_missing_table
+    assert_error "Table not found", "fill Items"
+  end
+
+  def test_analyze_table
+    assert_error "Table not found", "analyze Items"
+  end
+
+  def test_swap_table
+    assert_error "Table not found", "swap Items"
+  end
+
+  def test_unswap_table
+    assert_error "Table not found", "unswap Items"
+  end
+
+  def test_unprep_table
+    assert_error "Table not found", "unprep Items"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
