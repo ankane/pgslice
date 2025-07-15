@@ -3,4 +3,4 @@ Bundler.require(:default)
 require "minitest/autorun"
 require "minitest/pride"
 
-ENV["PGSLICE_ENV"] = "test"
+PgSlice::CLI.exit_on_failure = false

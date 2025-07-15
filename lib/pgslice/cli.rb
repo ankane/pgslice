@@ -1,8 +1,10 @@
 module PgSlice
   class CLI < Thor
     class << self
-      attr_accessor :instance
+      attr_accessor :instance, :exit_on_failure
+      alias_method :exit_on_failure?, :exit_on_failure
     end
+    self.exit_on_failure = true
 
     include Helpers
 
@@ -12,10 +14,6 @@ module PgSlice
     class_option :dry_run, type: :boolean, default: false, desc: "Print statements without executing"
 
     map %w[--version -v] => :version
-
-    def self.exit_on_failure?
-      ENV["PGSLICE_ENV"] != "test"
-    end
 
     def initialize(*args)
       PgSlice::CLI.instance = self
