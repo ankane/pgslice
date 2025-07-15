@@ -97,6 +97,18 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "unprep Items"
   end
 
+  def test_hash
+    assert_hash "UserId"
+  end
+
+  def test_hash_primary_key
+    assert_hash "Id"
+  end
+
+  def test_hash_no_partitions
+    assert_error "Partitions must be greater than 0", "prep_hash Posts UserId 0"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
@@ -225,6 +237,32 @@ class PgSliceTest < Minitest::Test
     refute table_exists?("Posts_intermediate")
     refute table_exists?(partition_name)
     refute table_exists?(new_partition_name)
+  end
+
+  def assert_hash(column)
+    run_command "prep_hash Posts #{column} 3"
+    assert table_exists?("Posts_intermediate")
+    assert_equal 0, count("Posts_intermediate")
+
+    assert_error "No settings found", "add_partitions Posts --intermediate"
+
+    run_command "fill Posts"
+    assert_equal 10000, count("Posts_intermediate")
+
+    run_command "analyze Posts"
+
+    run_command "swap Posts"
+    assert !table_exists?("Posts_intermediate")
+    assert table_exists?("Posts_retired")
+
+    run_command "analyze Posts --swapped"
+
+    run_command "unswap Posts"
+    assert table_exists?("Posts_intermediate")
+    assert !table_exists?("Posts_retired")
+
+    run_command "unprep Posts"
+    assert !table_exists?("Posts_intermediate")
   end
 
   def assert_error(message, command)

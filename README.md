@@ -304,6 +304,15 @@ pgslice fill <table> --where "id > 1000" # use any conditions
 pgslice swap <table>
 ```
 
+## Hash Partitioning
+
+pgslice has basic support for hash partitioning. [unreleased, experimental]
+
+```sh
+pgslice prep_hash <table> <column> <partitions>
+pgslice swap <table>
+```
+
 ## Triggers
 
 Triggers aren’t copied from the original table. You can set up triggers on the intermediate table if needed.
