@@ -22,7 +22,7 @@ module PgSlice
 
       primary_key = table.primary_key
       if primary_key.include?(column)
-        queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
+        queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});"
       end
 
       table.index_defs.each do |index_def|
@@ -39,8 +39,8 @@ module PgSlice
           CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(intermediate_table)} FOR VALUES WITH (MODULUS #{partitions}, REMAINDER #{i});
         SQL
 
-        unless primary_key.include?(column)
-          queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});" if primary_key.any?
+        if primary_key.any? && !primary_key.include?(column)
+          queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});"
         end
       end
 
