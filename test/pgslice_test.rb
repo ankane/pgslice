@@ -2,7 +2,7 @@ require_relative "test_helper"
 
 class PgSliceTest < Minitest::Test
   def setup
-    $conn.exec File.read("test/support/schema.sql")
+    execute File.read("test/support/schema.sql")
   end
 
   def test_day
@@ -100,10 +100,10 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
-    $conn.exec(%!CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"!)
+    execute %!CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"!
 
     if server_version_num >= 120000 && !trigger_based
-      $conn.exec(%!ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED!)
+      execute %!ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED!
     end
 
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based} #{"--test-version #{version}" if version}"
@@ -144,12 +144,12 @@ class PgSliceTest < Minitest::Test
     assert_equal 10000, count("Posts_intermediate")
 
     # insert into old table
-    $conn.exec_params(%!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]).first
+    execute %!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]
 
     run_command "analyze Posts"
     # https://github.com/postgres/postgres/commit/375aed36ad83f0e021e9bdd3a0034c0c992c66dc
     if server_version_num >= 150000
-      last_analyzed = $conn.exec("SELECT relname, last_analyze FROM pg_stat_user_tables WHERE relname LIKE 'Posts_%'").to_a
+      last_analyzed = execute("SELECT relname, last_analyze FROM pg_stat_user_tables WHERE relname LIKE 'Posts_%'")
       assert_equal 4, last_analyzed.count { |v| v["last_analyze"] }
     end
 
@@ -180,7 +180,7 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key new_partition_name
 
     # test insert works
-    insert_result = $conn.exec_params(%!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]).first
+    insert_result = execute(%!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]).first
     assert_equal 10002, count("Posts")
     if declarative
       assert insert_result["Id"]
@@ -191,13 +191,13 @@ class PgSliceTest < Minitest::Test
 
     # test insert with null field
     error = assert_raises(PG::ServerError) do
-      $conn.exec('INSERT INTO "Posts" ("UserId") VALUES (1)')
+      execute %!INSERT INTO "Posts" ("UserId") VALUES (1)!
     end
     assert_includes error.message, "partition"
 
     # test foreign key
     error = assert_raises(PG::ServerError) do
-      $conn.exec(%!INSERT INTO "Posts" (#{quote_ident(column)}, "UserId") VALUES (NOW(), 1)!)
+      execute %!INSERT INTO "Posts" (#{quote_ident(column)}, "UserId") VALUES (NOW(), 1)!
     end
     assert_includes error.message, "violates foreign key constraint"
 
@@ -252,36 +252,36 @@ class PgSliceTest < Minitest::Test
   end
 
   def add_column(table, column)
-    $conn.exec("ALTER TABLE #{quote_ident(table)} ADD COLUMN #{quote_ident(column)} timestamp")
+    execute "ALTER TABLE #{quote_ident(table)} ADD COLUMN #{quote_ident(column)} timestamp"
   end
 
   def assert_column(table, column)
-    assert_includes $conn.exec("SELECT * FROM #{quote_ident(table)} LIMIT 0").fields, column
+    assert_includes execute("SELECT * FROM #{quote_ident(table)} LIMIT 0").fields, column
   end
 
   def table_exists?(table_name)
-    sql = <<~SQL
+    query = <<~SQL
       SELECT * FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name = $1
     SQL
-    result = $conn.exec_params(sql, [table_name])
+    result = execute(query, [table_name])
     result.any?
   end
 
   def count(table_name, only: false)
-    result = $conn.exec <<~SQL
+    result = execute <<~SQL
       SELECT COUNT(*) FROM #{only ? "ONLY " : ""}#{quote_ident(table_name)}
     SQL
     result.first["count"].to_i
   end
 
   def primary_key(table_name)
-    sql = <<~SQL
+    query = <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
       WHERE contype = 'p' AND conrelid = $1::regclass
     SQL
-    result = $conn.exec_params(sql, [quote_ident(table_name)])
+    result = execute(query, [quote_ident(table_name)])
     result.first
   end
 
@@ -295,12 +295,12 @@ class PgSliceTest < Minitest::Test
   end
 
   def index(table_name)
-    sql = <<~SQL
+    query = <<~SQL
       SELECT pg_get_indexdef(indexrelid)
       FROM pg_index
       WHERE indrelid = $1::regclass AND indisprimary = 'f'
     SQL
-    result = $conn.exec_params(sql, [quote_ident(table_name)])
+    result = execute(query, [quote_ident(table_name)])
     result.first
   end
 
@@ -313,12 +313,12 @@ class PgSliceTest < Minitest::Test
   end
 
   def assert_foreign_key(table_name)
-    sql = <<~SQL
+    query = <<~SQL
       SELECT pg_get_constraintdef(oid) AS def
       FROM pg_constraint
       WHERE contype = 'f' AND conrelid = $1::regclass
     SQL
-    result = $conn.exec_params(sql, [quote_ident(table_name)])
+    result = execute(query, [quote_ident(table_name)])
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
   end
 
@@ -326,18 +326,26 @@ class PgSliceTest < Minitest::Test
   # https://github.com/postgres/postgres/commit/20b9fa308ebf7d4a26ac53804fce1c30f781d60c
   # (backported to Postgres 10)
   def assert_statistics(table_name)
-    sql = <<~SQL
+    query = <<~SQL
       SELECT n_distinct
       FROM pg_stats_ext
       WHERE tablename = $1
     SQL
-    result = $conn.exec_params(sql, [table_name])
+    result = execute(query, [table_name])
     assert result.any?, "Missing extended statistics on #{table_name}"
     assert_equal %!{"1, 2": 10002}!, result.first["n_distinct"]
   end
 
   def server_version_num
-    $conn.exec("SHOW server_version_num").first["server_version_num"].to_i
+    execute("SHOW server_version_num").first["server_version_num"].to_i
+  end
+
+  def execute(query, params = [])
+    if params.any?
+      $conn.exec_params(query, params)
+    else
+      $conn.exec(query)
+    end
   end
 
   def quote_ident(value)
