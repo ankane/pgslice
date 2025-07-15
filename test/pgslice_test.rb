@@ -237,7 +237,7 @@ class PgSliceTest < Minitest::Test
       puts
     end
     stdout, stderr = capture_io do
-      PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
+      PgSlice::CLI.start("#{command} --url #{url}".split(" "))
     end
     if verbose?
       puts stdout
@@ -340,11 +340,19 @@ class PgSliceTest < Minitest::Test
     execute("SHOW server_version_num").first["server_version_num"].to_i
   end
 
+  def url
+    @url ||= ENV["PGSLICE_URL"] || "postgres:///pgslice_test"
+  end
+
+  def connection
+    @connection ||= PG::Connection.new(url)
+  end
+
   def execute(query, params = [])
     if params.any?
-      $conn.exec_params(query, params)
+      connection.exec_params(query, params)
     else
-      $conn.exec(query)
+      connection.exec(query)
     end
   end
 
