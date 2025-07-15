@@ -41,7 +41,7 @@ module PgSlice
     end
 
     def foreign_keys
-      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = #{regclass} AND contype ='f'").map { |r| r["pg_get_constraintdef"] }
+      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = $1::regclass AND contype ='f'", [quote_table]).map { |r| r["pg_get_constraintdef"] }
     end
 
     # https://stackoverflow.com/a/20537829
@@ -69,7 +69,7 @@ module PgSlice
     end
 
     def index_defs
-      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = #{regclass} AND indisprimary = 'f'").map { |r| r["pg_get_indexdef"] }
+      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = $1::regclass AND indisprimary = 'f'", [quote_table]).map { |r| r["pg_get_indexdef"] }
     end
 
     def quote_table
@@ -131,11 +131,11 @@ module PgSlice
     end
 
     def fetch_comment
-      execute("SELECT obj_description(#{regclass}) AS comment")[0]
+      execute("SELECT obj_description($1::regclass) AS comment", [quote_table])[0]
     end
 
     def fetch_trigger(trigger_name)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = #{regclass}", [trigger_name])[0]
+      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, quote_table])[0]
     end
 
     # legacy
@@ -184,10 +184,6 @@ module PgSlice
 
     def quote_ident(value)
       PG::Connection.quote_ident(value)
-    end
-
-    def regclass
-      "#{escape_literal(quote_table)}::regclass"
     end
 
     def sql_date(time, cast, add_cast = true)
