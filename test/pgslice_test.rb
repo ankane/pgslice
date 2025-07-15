@@ -73,23 +73,27 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "add_partitions Items"
   end
 
+  def test_add_partitions_non_partitioned_table
+    assert_error "No settings found", "add_partitions Posts"
+  end
+
   def test_fill_missing_table
     assert_error "Table not found", "fill Items"
   end
 
-  def test_analyze_table
+  def test_analyze_missing_table
     assert_error "Table not found", "analyze Items"
   end
 
-  def test_swap_table
+  def test_swap_missing_table
     assert_error "Table not found", "swap Items"
   end
 
-  def test_unswap_table
+  def test_unswap_missing_table
     assert_error "Table not found", "unswap Items"
   end
 
-  def test_unprep_table
+  def test_unprep_missing_table
     assert_error "Table not found", "unprep Items"
   end
 
