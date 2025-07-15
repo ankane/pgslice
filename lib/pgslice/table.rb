@@ -115,13 +115,13 @@ module PgSlice
     def partitions
       query = <<~SQL
         SELECT
-          nmsp_child.nspname  AS schema,
-          child.relname       AS name
+          nmsp_child.nspname AS schema,
+          child.relname AS name
         FROM pg_inherits
-          JOIN pg_class parent            ON pg_inherits.inhparent = parent.oid
-          JOIN pg_class child             ON pg_inherits.inhrelid   = child.oid
-          JOIN pg_namespace nmsp_parent   ON nmsp_parent.oid  = parent.relnamespace
-          JOIN pg_namespace nmsp_child    ON nmsp_child.oid   = child.relnamespace
+          JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+          JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+          JOIN pg_namespace nmsp_parent ON nmsp_parent.oid = parent.relnamespace
+          JOIN pg_namespace nmsp_child ON nmsp_child.oid = child.relnamespace
         WHERE
           nmsp_parent.nspname = $1 AND
           parent.relname = $2
