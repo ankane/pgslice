@@ -72,10 +72,10 @@ class PgSliceTest < Minitest::Test
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
-    $conn.exec('CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"')
+    $conn.exec(%!CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"!)
 
     if server_version_num >= 120000 && !trigger_based
-      $conn.exec('ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED')
+      $conn.exec(%!ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED!)
     end
 
     run_command "prep Posts #{column} #{period} #{"--trigger-based" if trigger_based} #{"--test-version #{version}" if version}"
@@ -116,7 +116,7 @@ class PgSliceTest < Minitest::Test
     assert_equal 10000, count("Posts_intermediate")
 
     # insert into old table
-    $conn.exec_params('INSERT INTO "Posts" (' + quote_ident(column) + ') VALUES ($1) RETURNING "Id"', [now.iso8601]).first
+    $conn.exec_params(%!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]).first
 
     run_command "analyze Posts"
     # https://github.com/postgres/postgres/commit/375aed36ad83f0e021e9bdd3a0034c0c992c66dc
@@ -153,7 +153,7 @@ class PgSliceTest < Minitest::Test
     assert_foreign_key new_partition_name
 
     # test insert works
-    insert_result = $conn.exec_params('INSERT INTO "Posts" (' + quote_ident(column) + ') VALUES ($1) RETURNING "Id"', [now.iso8601]).first
+    insert_result = $conn.exec_params(%!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]).first
     assert_equal 10002, count("Posts")
     if declarative
       assert insert_result["Id"]
@@ -170,7 +170,7 @@ class PgSliceTest < Minitest::Test
 
     # test foreign key
     error = assert_raises(PG::ServerError) do
-      $conn.exec('INSERT INTO "Posts" ("' + column + '", "UserId") VALUES (NOW(), 1)')
+      $conn.exec(%!INSERT INTO "Posts" (#{quote_ident(column)}, "UserId") VALUES (NOW(), 1)!)
     end
     assert_includes error.message, "violates foreign key constraint"
 
@@ -306,7 +306,7 @@ class PgSliceTest < Minitest::Test
     SQL
     result = $conn.exec_params(sql, [table_name])
     assert result.any?, "Missing extended statistics on #{table_name}"
-    assert_equal '{"1, 2": 10002}', result.first["n_distinct"]
+    assert_equal %!{"1, 2": 10002}!, result.first["n_distinct"]
   end
 
   def server_version_num
