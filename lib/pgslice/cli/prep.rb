@@ -33,10 +33,7 @@ module PgSlice
       declarative = version > 1
 
       if declarative && options[:partition]
-        including = ["DEFAULTS", "CONSTRAINTS", "STORAGE", "COMMENTS", "STATISTICS"]
-        if server_version_num >= 120000
-          including << "GENERATED"
-        end
+        including = ["DEFAULTS", "CONSTRAINTS", "STORAGE", "COMMENTS", "STATISTICS", "GENERATED"]
         if server_version_num >= 140000
           including << "COMPRESSION"
         end

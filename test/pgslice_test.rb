@@ -102,7 +102,7 @@ class PgSliceTest < Minitest::Test
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
     execute %!CREATE STATISTICS my_stats ON "Id", "UserId" FROM "Posts"!
 
-    if server_version_num >= 120000 && !trigger_based
+    if !trigger_based
       execute %!ALTER TABLE "Posts" ADD COLUMN "Gen" INTEGER GENERATED ALWAYS AS ("Id" * 10) STORED!
     end
 
@@ -210,7 +210,7 @@ class PgSliceTest < Minitest::Test
     run_command "analyze Posts --swapped"
 
     # pg_stats_ext view available with Postgres 12+
-    assert_statistics "Posts" if server_version_num >= 120000 && !trigger_based
+    assert_statistics "Posts" if !trigger_based
 
     # TODO check sequence ownership
     run_command "unswap Posts"
