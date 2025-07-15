@@ -12,11 +12,19 @@ module PgSlice
     end
 
     def exists?
-      execute("SELECT COUNT(*) FROM pg_catalog.pg_tables WHERE schemaname = $1 AND tablename = $2", [schema, name]).first["count"].to_i > 0
+      query = <<~SQL
+        SELECT COUNT(*) FROM pg_catalog.pg_tables
+        WHERE schemaname = $1 AND tablename = $2
+      SQL
+      execute(query, [schema, name]).first["count"].to_i > 0
     end
 
     def columns
-      execute("SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND is_generated = 'NEVER'", [schema, name]).map { |r| r["column_name"] }
+      query = <<~SQL
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = $1 AND table_name = $2 AND is_generated = 'NEVER'
+      SQL
+      execute(query, [schema, name]).map { |r| r["column_name"] }
     end
 
     # http://www.dbforums.com/showthread.php?1667561-How-to-list-sequences-and-the-columns-by-SQL
@@ -41,7 +49,11 @@ module PgSlice
     end
 
     def foreign_keys
-      execute("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = $1::regclass AND contype ='f'", [quote_table]).map { |r| r["pg_get_constraintdef"] }
+      query = <<~SQL
+        SELECT pg_get_constraintdef(oid) FROM pg_constraint
+        WHERE conrelid = $1::regclass AND contype ='f'
+      SQL
+      execute(query, [quote_table]).map { |r| r["pg_get_constraintdef"] }
     end
 
     # https://stackoverflow.com/a/20537829
@@ -69,7 +81,11 @@ module PgSlice
     end
 
     def index_defs
-      execute("SELECT pg_get_indexdef(indexrelid) FROM pg_index WHERE indrelid = $1::regclass AND indisprimary = 'f'", [quote_table]).map { |r| r["pg_get_indexdef"] }
+      query = <<~SQL
+        SELECT pg_get_indexdef(indexrelid) FROM pg_index
+        WHERE indrelid = $1::regclass AND indisprimary = 'f'
+      SQL
+      execute(query, [quote_table]).map { |r| r["pg_get_indexdef"] }
     end
 
     def quote_table
@@ -89,7 +105,11 @@ module PgSlice
     end
 
     def column_cast(column)
-      data_type = execute("SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3", [schema, name, column])[0]["data_type"]
+      query = <<~SQL
+        SELECT data_type FROM information_schema.columns
+        WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
+      SQL
+      data_type = execute(query, [schema, name, column])[0]["data_type"]
       data_type == "timestamp with time zone" ? "timestamptz" : "date"
     end
 
@@ -139,7 +159,11 @@ module PgSlice
     end
 
     def fetch_trigger(trigger_name)
-      execute("SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger WHERE tgname = $1 AND tgrelid = $2::regclass", [trigger_name, quote_table])[0]
+      query = <<~SQL
+        SELECT obj_description(oid, 'pg_trigger') AS comment FROM pg_trigger
+        WHERE tgname = $1 AND tgrelid = $2::regclass
+      SQL
+      execute(query, [trigger_name, quote_table])[0]
     end
 
     # legacy
