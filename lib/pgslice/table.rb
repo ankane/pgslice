@@ -96,10 +96,14 @@ module PgSlice
     def max_id(primary_key, below: nil, where: nil)
       query = "SELECT MAX(#{quote_ident(primary_key)}) FROM #{quote_table}"
       conditions = []
-      conditions << "#{quote_ident(primary_key)} <= #{below}" if below
+      params = []
+      if below
+        conditions << "#{quote_ident(primary_key)} <= $1"
+        params << below
+      end
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
-      execute(query)[0]["max"].to_i
+      execute(query, params)[0]["max"].to_i
     end
 
     def min_id(primary_key, column, cast, starting_time, where)
