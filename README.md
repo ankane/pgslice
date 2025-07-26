@@ -301,7 +301,9 @@ You can also use pgslice to reduce the size of a table without partitioning by c
 ```sh
 pgslice prep <table> --no-partition
 pgslice fill <table> --where "id > 1000" # use any conditions
+pgslice analyze <table>
 pgslice swap <table>
+pgslice fill <table> --where "id > 1000" --swapped
 ```
 
 ## Hash Partitioning

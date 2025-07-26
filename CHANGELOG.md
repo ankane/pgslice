@@ -1,7 +1,8 @@
 ## 0.7.1 (unreleased)
 
 - Added experimental support for hash partitioning
-- Improved `analyze` and `unprep` for declarative partitioning
+- Fixed `analyze` analyzing partitions twice with declarative partitioning
+- Removed unnecessary query for `unprep` with declarative partitioning
 
 ## 0.7.0 (2025-05-26)
 

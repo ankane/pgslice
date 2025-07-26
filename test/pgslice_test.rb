@@ -33,9 +33,17 @@ class PgSliceTest < Minitest::Test
     run_command "fill Posts"
     assert_equal 10000, count("Posts_intermediate")
 
+    assert_analyzed "Posts_intermediate" do
+      run_command "analyze Posts"
+    end
+
     run_command "swap Posts"
     assert !table_exists?("Posts_intermediate")
     assert table_exists?("Posts_retired")
+
+    assert_analyzed "Posts" do
+      run_command "analyze Posts --swapped"
+    end
 
     run_command "unswap Posts"
     assert table_exists?("Posts_intermediate")
@@ -158,11 +166,8 @@ class PgSliceTest < Minitest::Test
     # insert into old table
     execute %!INSERT INTO "Posts" (#{quote_ident(column)}) VALUES ($1) RETURNING "Id"!, [now.iso8601]
 
-    run_command "analyze Posts"
-    # https://github.com/postgres/postgres/commit/375aed36ad83f0e021e9bdd3a0034c0c992c66dc
-    if server_version_num >= 150000
-      last_analyzed = execute("SELECT relname, last_analyze FROM pg_stat_user_tables WHERE relname LIKE 'Posts_%'")
-      assert_equal 4, last_analyzed.count { |v| v["last_analyze"] }
+    assert_analyzed "Posts%", 4 do
+      run_command "analyze Posts"
     end
 
     # TODO check sequence ownership
@@ -219,7 +224,9 @@ class PgSliceTest < Minitest::Test
     assert_column partition_name, "updatedAt"
     assert_column new_partition_name, "updatedAt"
 
-    run_command "analyze Posts --swapped"
+    assert_analyzed "Posts%", 6 do
+      run_command "analyze Posts --swapped"
+    end
 
     # pg_stats_ext view available with Postgres 12+
     assert_statistics "Posts" if !trigger_based
@@ -275,7 +282,7 @@ class PgSliceTest < Minitest::Test
       puts
     end
     stdout, stderr = capture_io do
-      PgSlice::CLI.start("#{command} --url #{$url}".split(" "))
+      PgSlice::CLI.start("#{command} --url #{url}".split(" "))
     end
     if verbose?
       puts stdout
@@ -360,6 +367,16 @@ class PgSliceTest < Minitest::Test
     assert !result.detect { |row| row["def"] =~ /\AFOREIGN KEY \(.*\) REFERENCES "Users"\("Id"\)\z/ }.nil?, "Missing foreign key on #{table_name}"
   end
 
+  def assert_analyzed(table_pattern, expected = 1)
+    execute("SELECT pg_stat_reset()")
+    yield
+    last_analyzed = execute("SELECT relname, last_analyze FROM pg_stat_user_tables WHERE relname LIKE $1", [table_pattern])
+    # https://github.com/postgres/postgres/commit/375aed36ad83f0e021e9bdd3a0034c0c992c66dc
+    if server_version_num >= 150000
+      assert_equal expected, last_analyzed.count { |v| v["last_analyze"] }
+    end
+  end
+
   # extended statistics are built on partitioned tables
   # https://github.com/postgres/postgres/commit/20b9fa308ebf7d4a26ac53804fce1c30f781d60c
   # (backported to Postgres 10)
@@ -378,11 +395,19 @@ class PgSliceTest < Minitest::Test
     execute("SHOW server_version_num").first["server_version_num"].to_i
   end
 
+  def url
+    @url ||= ENV["PGSLICE_URL"] || "postgres:///pgslice_test"
+  end
+
+  def connection
+    @connection ||= PG::Connection.new(url)
+  end
+
   def execute(query, params = [])
     if params.any?
-      $conn.exec_params(query, params)
+      connection.exec_params(query, params)
     else
-      $conn.exec(query)
+      connection.exec(query)
     end
   end
 
