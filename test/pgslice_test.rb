@@ -256,13 +256,17 @@ class PgSliceTest < Minitest::Test
     run_command "fill Posts"
     assert_equal 10000, count("Posts_intermediate")
 
-    run_command "analyze Posts"
+    assert_analyzed "Posts%", 4 do
+      run_command "analyze Posts"
+    end
 
     run_command "swap Posts"
     assert !table_exists?("Posts_intermediate")
     assert table_exists?("Posts_retired")
 
-    run_command "analyze Posts --swapped"
+    assert_analyzed "Posts%", 4 do
+      run_command "analyze Posts --swapped"
+    end
 
     run_command "unswap Posts"
     assert table_exists?("Posts_intermediate")
