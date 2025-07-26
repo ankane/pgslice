@@ -308,11 +308,14 @@ pgslice fill <table> --where "id > 1000" --swapped
 
 ## Hash Partitioning
 
-pgslice has basic support for hash partitioning. [unreleased, experimental]
+pgslice has experimental support for hash partitioning. [unreleased]
 
 ```sh
 pgslice prep_hash <table> <column> <partitions>
+pgslice fill <table>
+pgslice analyze <table>
 pgslice swap <table>
+pgslice fill <table> --swapped
 ```
 
 ## Triggers
