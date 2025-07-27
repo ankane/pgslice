@@ -1,4 +1,4 @@
-## 0.7.1 (unreleased)
+## 0.7.1 (2025-07-27)
 
 - Fixed `analyze` analyzing partitions twice with declarative partitioning
 - Removed unnecessary query for `unprep` with declarative partitioning
