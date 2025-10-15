@@ -105,6 +105,17 @@ class PgSliceTest < Minitest::Test
     assert_error "No settings found", "add_partitions Posts"
   end
 
+  def test_add_partitions_missing_tablespace
+    run_command "prep Posts createdAt day"
+    assert_error %!tablespace "missing" does not exist!, "add_partitions Posts --intermediate --tablespace missing"
+  end
+
+  # TODO raise error
+  def test_add_partitions_negative_past_future
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate --past -1 --future -1"
+  end
+
   def test_fill_missing_table
     assert_error "Table not found", "fill Items"
   end
