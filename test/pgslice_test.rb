@@ -114,7 +114,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def test_hash_no_partitions
-    assert_error "Partitions must be greater than 0", "prep_hash Posts UserId 0"
+    assert_error "Partitions must be greater than 0", "prep --strategy hash Posts UserId 0"
   end
 
   private
@@ -247,7 +247,7 @@ class PgSliceTest < Minitest::Test
   end
 
   def assert_hash(column)
-    run_command "prep_hash Posts #{column} 3"
+    run_command "prep --strategy hash Posts #{column} 3"
     assert table_exists?("Posts_intermediate")
     assert_equal 0, count("Posts_intermediate")
 

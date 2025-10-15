@@ -1,10 +1,23 @@
 module PgSlice
   class CLI
     desc "prep TABLE [COLUMN] [PERIOD]", "Create an intermediate table for partitioning"
+    option :strategy, type: :string, default: "date-range", hide: true
     option :partition, type: :boolean, default: true, desc: "Partition the table"
     option :trigger_based, type: :boolean, default: false, desc: "Use trigger-based partitioning"
     option :test_version, type: :numeric, hide: true
     def prep(table, column = nil, period = nil)
+      case options[:strategy]
+      when "hash"
+        abort "Can't use --trigger-based and --strategy hash" if options[:trigger_based]
+        abort "Can't use --no-partition and --strategy hash" unless options[:partition]
+        prep_hash(table, column, period)
+        return
+      when "date-range"
+        # do nothing
+      else
+        abort "Invalid strategy: #{options[:strategy]}"
+      end
+
       table = create_table(table)
       intermediate_table = table.intermediate_table
       trigger_name = table.trigger_name
@@ -90,6 +103,54 @@ module PgSlice
       end
 
       run_queries(queries)
+    end
+
+    no_commands do
+      def prep_hash(table, column, partitions)
+        table = create_table(table)
+        intermediate_table = table.intermediate_table
+        partitions = partitions.to_i
+
+        assert_table(table)
+        assert_no_table(intermediate_table)
+        abort "Partitions must be greater than 0" if partitions <= 0
+
+        queries = []
+
+        including = ["DEFAULTS", "CONSTRAINTS", "STORAGE", "COMMENTS", "STATISTICS", "GENERATED"]
+        if server_version_num >= 140000
+          including << "COMPRESSION"
+        end
+        queries << <<~SQL
+          CREATE TABLE #{quote_table(intermediate_table)} (LIKE #{quote_table(table)} #{including.map { |v| "INCLUDING #{v}" }.join(" ")}) PARTITION BY HASH (#{quote_ident(column)});
+        SQL
+
+        primary_key = table.primary_key
+        if primary_key.include?(column)
+          queries << "ALTER TABLE #{quote_table(intermediate_table)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});"
+        end
+
+        table.index_defs.each do |index_def|
+          queries << make_index_def(index_def, intermediate_table)
+        end
+
+        table.foreign_keys.each do |fk_def|
+          queries << make_fk_def(fk_def, intermediate_table)
+        end
+
+        partitions.times do |i|
+          partition = Table.new(table.schema, "#{table.name}_#{i}")
+          queries << <<~SQL
+            CREATE TABLE #{quote_table(partition)} PARTITION OF #{quote_table(intermediate_table)} FOR VALUES WITH (MODULUS #{partitions}, REMAINDER #{i});
+          SQL
+
+          if primary_key.any? && !primary_key.include?(column)
+            queries << "ALTER TABLE #{quote_table(partition)} ADD PRIMARY KEY (#{primary_key.map { |k| quote_ident(k) }.join(", ")});"
+          end
+        end
+
+        run_queries(queries)
+      end
     end
   end
 end
