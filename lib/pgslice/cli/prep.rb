@@ -8,6 +8,7 @@ module PgSlice
     def prep(table, column = nil, period = nil)
       case options[:strategy]
       when "hash"
+        abort "Usage: \"pgslice prep --strategy hash TABLE COLUMN PARTITIONS\"" if !(column && period)
         abort "Can't use --trigger-based and --strategy hash" if options[:trigger_based]
         abort "Can't use --no-partition and --strategy hash" unless options[:partition]
         prep_hash(table, column, period)

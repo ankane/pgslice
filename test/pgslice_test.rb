@@ -113,8 +113,24 @@ class PgSliceTest < Minitest::Test
     assert_hash "Id"
   end
 
+  def test_hash_missing_arguments
+    assert_error "Usage: \"pgslice prep --strategy hash TABLE COLUMN PARTITIONS\"", "prep --strategy hash Posts"
+  end
+
   def test_hash_no_partitions
     assert_error "Partitions must be greater than 0", "prep --strategy hash Posts UserId 0"
+  end
+
+  def test_hash_trigger_based
+    assert_error "Can't use --trigger-based and --strategy hash", "prep --strategy hash Posts UserId 3 --trigger-based"
+  end
+
+  def test_hash_no_partition
+    assert_error "Can't use --no-partition and --strategy hash", "prep --strategy hash Posts UserId 3 --no-partition"
+  end
+
+  def test_strategy_invalid
+    assert_error "Invalid strategy: bad", "prep --strategy bad Posts UserId 3"
   end
 
   private
