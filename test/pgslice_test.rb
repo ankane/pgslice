@@ -73,8 +73,28 @@ class PgSliceTest < Minitest::Test
     assert_period "month", trigger_based: true, tablespace: true
   end
 
+  def test_prep_missing_arguments
+    assert_error %!Usage: "pgslice prep TABLE COLUMN PERIOD"!, "prep Posts createdAt"
+  end
+
   def test_prep_missing_table
-    assert_error "Table not found", "prep Items"
+    assert_error "Table not found", "prep Items createdAt day"
+  end
+
+  def test_prep_missing_column
+    assert_error "Column not found", "prep Posts created day"
+  end
+
+  def test_prep_invalid_period
+    assert_error "Invalid period", "prep Posts createdAt decade"
+  end
+
+  def test_prep_no_partition_extra_arguments
+    assert_error %!Usage: "pgslice prep TABLE --no-partition"!, "prep Posts createdAt --no-partition"
+  end
+
+  def test_prep_no_partition_trigger_based
+    assert_error "Can't use --trigger-based and --no-partition", "prep Posts --no-partition --trigger-based"
   end
 
   def test_add_partitions_missing_table
@@ -294,7 +314,7 @@ class PgSliceTest < Minitest::Test
 
   def assert_primary_key(table_name)
     result = primary_key(table_name)
-    assert_match "PRIMARY KEY (\"Id\")", result["def"]
+    assert_match %!PRIMARY KEY ("Id")!, result["def"]
   end
 
   def refute_primary_key(table_name)
