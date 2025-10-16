@@ -166,7 +166,6 @@ module PgSlice
       execute(query, [trigger_name, quote_table])[0]
     end
 
-    # legacy
     def fetch_settings(trigger_name)
       needs_comment = false
       trigger_comment = fetch_trigger(trigger_name)
