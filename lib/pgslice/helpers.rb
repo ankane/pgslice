@@ -103,7 +103,16 @@ module PgSlice
         fmt = "%Y-%m-%d"
       end
       str = quote(time.strftime(fmt))
-      add_cast ? "#{str}::#{cast}" : str
+      if add_cast
+        case cast
+        when "date", "timestamptz"
+          "#{str}::#{cast}"
+        else
+          abort "Invalid cast"
+        end
+      else
+        str
+      end
     end
 
     def name_format(period)
