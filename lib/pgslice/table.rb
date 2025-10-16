@@ -194,7 +194,7 @@ module PgSlice
       end
 
       unless ["date", "timestamptz"].include?(cast)
-        raise Thor::Error, "Invalid cast"
+        PgSlice::CLI.instance.send(:abort, "Invalid cast")
       end
 
       version ||= trigger_comment ? 1 : 2
