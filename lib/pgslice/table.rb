@@ -194,6 +194,10 @@ module PgSlice
         needs_comment = true
       end
 
+      unless ["date", "timestamptz"].include?(cast)
+        raise Thor::Error, "Invalid cast"
+      end
+
       version ||= trigger_comment ? 1 : 2
       declarative = version > 1
 
