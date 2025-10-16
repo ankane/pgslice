@@ -158,7 +158,7 @@ module PgSlice
     end
 
     def quote(value)
-      if value.is_a?(Integer)
+      if value.is_a?(Numeric)
         value
       else
         connection.escape_literal(value)
