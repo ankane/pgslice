@@ -74,7 +74,7 @@ module PgSlice
       end
 
       while starting_id < max_source_id
-        where = "#{quote_ident(primary_key)} > #{starting_id} AND #{quote_ident(primary_key)} <= #{starting_id + batch_size}"
+        where = "#{quote_ident(primary_key)} > #{escape_literal(starting_id)} AND #{quote_ident(primary_key)} <= #{escape_literal(starting_id + batch_size)}"
         if starting_time
           where << " AND #{quote_ident(field)} >= #{sql_date(starting_time, cast)} AND #{quote_ident(field)} < #{sql_date(ending_time, cast)}"
         end

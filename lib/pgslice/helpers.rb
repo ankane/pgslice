@@ -158,7 +158,11 @@ module PgSlice
     end
 
     def escape_literal(value)
-      connection.escape_literal(value)
+      if value.is_a?(Integer)
+        value
+      else
+        connection.escape_literal(value)
+      end
     end
 
     def quote_table(table)
