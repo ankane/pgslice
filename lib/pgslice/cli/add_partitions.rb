@@ -27,7 +27,7 @@ module PgSlice
       queries = []
 
       if needs_comment
-        queries << "COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(table)} IS #{escape_literal("column:#{field},period:#{period},cast:#{cast}")};"
+        queries << "COMMENT ON TRIGGER #{quote_ident(trigger_name)} ON #{quote_table(table)} IS #{quote("column:#{field},period:#{period},cast:#{cast}")};"
       end
 
       # today = utc date

@@ -20,7 +20,7 @@ module PgSlice
         queries << "ALTER SEQUENCE #{quote_ident(sequence["sequence_schema"])}.#{quote_ident(sequence["sequence_name"])} OWNED BY #{quote_table(table)}.#{quote_ident(sequence["related_column"])};"
       end
 
-      queries.unshift("SET LOCAL lock_timeout = #{escape_literal(options[:lock_timeout])};")
+      queries.unshift("SET LOCAL lock_timeout = #{quote(options[:lock_timeout])};")
 
       run_queries(queries)
     end

@@ -209,8 +209,8 @@ module PgSlice
       PgSlice::CLI.instance.send(:execute, *args)
     end
 
-    def escape_literal(value)
-      PgSlice::CLI.instance.send(:escape_literal, value)
+    def quote(value)
+      PgSlice::CLI.instance.send(:quote, value)
     end
 
     def quote_ident(value)
@@ -223,7 +223,7 @@ module PgSlice
       else
         fmt = "%Y-%m-%d"
       end
-      str = escape_literal(time.strftime(fmt))
+      str = quote(time.strftime(fmt))
       add_cast ? "#{str}::#{cast}" : str
     end
   end

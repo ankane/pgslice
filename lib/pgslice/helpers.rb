@@ -102,7 +102,7 @@ module PgSlice
       else
         fmt = "%Y-%m-%d"
       end
-      str = escape_literal(time.strftime(fmt))
+      str = quote(time.strftime(fmt))
       add_cast ? "#{str}::#{cast}" : str
     end
 
@@ -157,7 +157,7 @@ module PgSlice
       PG::Connection.quote_ident(value)
     end
 
-    def escape_literal(value)
+    def quote(value)
       if value.is_a?(Integer)
         value
       else
