@@ -214,17 +214,11 @@ module PgSlice
     end
 
     def quote_ident(value)
-      PG::Connection.quote_ident(value)
+      PgSlice::CLI.instance.send(:quote_ident, value)
     end
 
-    def sql_date(time, cast, add_cast = true)
-      if cast == "timestamptz"
-        fmt = "%Y-%m-%d %H:%M:%S UTC"
-      else
-        fmt = "%Y-%m-%d"
-      end
-      str = quote(time.strftime(fmt))
-      add_cast ? "#{str}::#{cast}" : str
+    def sql_date(*args)
+      PgSlice::CLI.instance.send(:sql_date, *args)
     end
   end
 end
