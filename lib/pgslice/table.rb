@@ -194,7 +194,7 @@ module PgSlice
       end
 
       unless ["date", "timestamptz"].include?(cast)
-        PgSlice::CLI.instance.send(:abort, "Invalid cast")
+        abort "Invalid cast"
       end
 
       version ||= trigger_comment ? 1 : 2
@@ -204,6 +204,10 @@ module PgSlice
     end
 
     protected
+
+    def abort(message)
+      PgSlice::CLI.instance.send(:abort, message)
+    end
 
     def execute(*args)
       PgSlice::CLI.instance.send(:execute, *args)
