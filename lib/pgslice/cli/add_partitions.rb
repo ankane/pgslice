@@ -13,7 +13,11 @@ module PgSlice
       assert_table(table)
 
       future = options[:future]
+      # TODO uncomment in 0.8.0
+      # abort "--future cannot be negative" if future < 0
       past = options[:past]
+      # TODO uncomment in 0.8.0
+      # abort "--past cannot be negative" if past < 0
       tablespace = options[:tablespace]
       range = (-1 * past)..future
 

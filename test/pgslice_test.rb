@@ -110,10 +110,18 @@ class PgSliceTest < Minitest::Test
     assert_error %!tablespace "missing" does not exist!, "add_partitions Posts --intermediate --tablespace missing"
   end
 
-  # TODO raise error
-  def test_add_partitions_negative_past_future
+  def test_add_partitions_negative_past
     run_command "prep Posts createdAt day"
-    run_command "add_partitions Posts --intermediate --past -1 --future -1"
+    run_command "add_partitions Posts --intermediate --past -1"
+    # TODO raise error in 0.8.0
+    # assert_error "--past cannot be negative", "add_partitions Posts --intermediate --past -1"
+  end
+
+  def test_add_partitions_negative_future
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate --future -1"
+    # TODO raise error in 0.8.0
+    # assert_error "--future cannot be negative", "add_partitions Posts --intermediate --future -1"
   end
 
   def test_fill_missing_table
