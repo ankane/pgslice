@@ -77,7 +77,7 @@ module PgSlice
         begin
           execute(query)
         rescue PG::ServerError => e
-          abort("#{e.class.name}: #{e.message}")
+          abort "#{e.class.name}: #{e.message}"
         end
       end
       log_sql
