@@ -5,7 +5,7 @@ module PgSlice
     option :swapped, type: :boolean, default: false, desc: "Use swapped table"
     option :source_table, desc: "Source table"
     option :dest_table, desc: "Destination table"
-    option :start, type: :numeric, desc: "Primary key to start"
+    option :start, type: :string, desc: "Primary key to start (numeric or ULID)"
     option :where, desc: "Conditions to filter"
     option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
     def fill(table)
@@ -45,21 +45,44 @@ module PgSlice
       begin
         max_source_id = source_table.max_id(primary_key)
       rescue PG::UndefinedFunction
-        abort "Only numeric primary keys are supported"
+        abort "Only numeric and ULID primary keys are supported"
       end
 
       max_dest_id =
         if options[:start]
-          options[:start]
+          # Convert to appropriate type
+          start_val = options[:start]
+          numeric_id?(start_val) ? start_val.to_i : start_val
         elsif options[:swapped]
           dest_table.max_id(primary_key, where: options[:where], below: max_source_id)
         else
           dest_table.max_id(primary_key, where: options[:where])
         end
 
-      if max_dest_id == 0 && !options[:swapped]
+      # Get the appropriate handler for the ID type
+      # Prefer --start option, then max_source_id, then sample from table
+      handler = if options[:start]
+        id_handler(options[:start], connection, source_table, primary_key)
+      elsif max_source_id
+        id_handler(max_source_id, connection, source_table, primary_key)
+      else
+        # Sample a row to determine ID type
+        sample_query = "SELECT #{quote_ident(primary_key)} FROM #{quote_table(source_table)} LIMIT 1"
+        log_sql sample_query
+        sample_result = execute(sample_query)[0]
+        if sample_result && sample_result[primary_key]
+          id_handler(sample_result[primary_key], connection, source_table, primary_key)
+        else
+          # Default to numeric if we can't determine
+          Helpers::NumericHandler.new
+        end
+      end
+
+      if (max_dest_id == 0 || max_dest_id == handler.min_value) && !options[:swapped]
         min_source_id = source_table.min_id(primary_key, field, cast, starting_time, options[:where])
-        max_dest_id = min_source_id - 1 if min_source_id
+        if min_source_id
+          max_dest_id = handler.predecessor(min_source_id)
+        end
       end
 
       starting_id = max_dest_id
@@ -67,14 +90,15 @@ module PgSlice
       batch_size = options[:batch_size]
 
       i = 1
-      batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
+      batch_count = handler.batch_count(starting_id, max_source_id, batch_size)
+      first_batch = true
 
       if batch_count == 0
         log_sql "/* nothing to fill */"
       end
 
-      while starting_id < max_source_id
-        where = "#{quote_ident(primary_key)} > #{quote(starting_id)} AND #{quote_ident(primary_key)} <= #{quote(starting_id + batch_size)}"
+      while handler.should_continue?(starting_id, max_source_id)
+        where = handler.batch_where_condition(primary_key, starting_id, batch_size, first_batch && options[:start])
         if starting_time
           where << " AND #{quote_ident(field)} >= #{sql_date(starting_time, cast)} AND #{quote_ident(field)} < #{sql_date(ending_time, cast)}"
         end
@@ -82,19 +106,53 @@ module PgSlice
           where << " AND #{options[:where]}"
         end
 
-        query = <<~SQL
-          /* #{i} of #{batch_count} */
-          INSERT INTO #{quote_table(dest_table)} (#{fields})
-              SELECT #{fields} FROM #{quote_table(source_table)}
-              WHERE #{where}
-        SQL
-
-        run_query(query)
-
-        starting_id += batch_size
+        batch_label = batch_count ? "#{i} of #{batch_count}" : "batch #{i}"
+        
+        if handler.is_a?(UlidHandler)
+          # For ULIDs, use CTE with RETURNING to get max ID inserted
+          query = <<~SQL
+            /* #{batch_label} */
+            WITH inserted_batch AS (
+              INSERT INTO #{quote_table(dest_table)} (#{fields})
+                  SELECT #{fields} FROM #{quote_table(source_table)}
+                  WHERE #{where}
+                  ORDER BY #{quote_ident(primary_key)}
+                  LIMIT #{batch_size}
+                  ON CONFLICT DO NOTHING
+                  RETURNING #{quote_ident(primary_key)}
+            )
+            SELECT MAX(#{quote_ident(primary_key)}) as max_inserted_id FROM inserted_batch
+          SQL
+          
+          log_sql query
+          result = execute(query)
+          max_inserted_id = result[0]["max_inserted_id"]
+          puts "starting_id: #{starting_id}"
+          puts "max_inserted_id: #{max_inserted_id}"
+          
+          # If no records were inserted, break the loop
+          if max_inserted_id.nil?
+            break
+          end
+          
+          starting_id = max_inserted_id
+        else
+          query = <<~SQL
+            /* #{batch_label} */
+            INSERT INTO #{quote_table(dest_table)} (#{fields})
+                SELECT #{fields} FROM #{quote_table(source_table)}
+                WHERE #{where}
+                ON CONFLICT DO NOTHING
+          SQL
+          
+          run_query(query)
+          starting_id = handler.next_starting_id(starting_id, batch_size)
+        end
+        
         i += 1
+        first_batch = false
 
-        if options[:sleep] && starting_id <= max_source_id
+        if options[:sleep] && handler.should_continue?(starting_id, max_source_id)
           sleep(options[:sleep])
         end
       end
