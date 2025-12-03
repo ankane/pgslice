@@ -80,6 +80,16 @@ pgslice synchronize <table> [options]
 
   The original table is renamed `<table>_retired` and the intermediate table is renamed `<table>`.
 
+9. Enable Reverse Mirroring (now-partitioned table to retired table)
+
+This will make unswapping later less problematic as the two tables are kept in sync. Note that
+the tables will be slightly out of sync. Find some ID from before the swap, and run the table
+synchronize commands from Step 7 on the table to be sure to catch those rows.
+
+```sh
+pgslice enable_retired_mirroring <table>  # undo with pgslice disable_retired_mirroring <table>
+```
+
 9. Fill the rest (rows inserted between the first fill and the swap)
 
 This step should not be needed if you did the pgslice synchronize in step 7.
