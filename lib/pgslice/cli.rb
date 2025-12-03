@@ -26,27 +26,5 @@ module PgSlice
     def version
       log("pgslice #{PgSlice::VERSION}")
     end
-
-    desc "enable_mirroring TABLE", "Enable mirroring triggers for live data changes during partitioning"
-    def enable_mirroring(table_name)
-      table = create_table(table_name)
-      intermediate_table = table.intermediate_table
-      
-      assert_table(table)
-      assert_table(intermediate_table)
-      
-      enable_mirroring_triggers(table)
-      log("Mirroring triggers enabled for #{table_name}")
-    end
-
-    desc "disable_mirroring TABLE", "Disable mirroring triggers after partitioning is complete"
-    def disable_mirroring(table_name)
-      table = create_table(table_name)
-      
-      assert_table(table)
-      
-      disable_mirroring_triggers(table)
-      log("Mirroring triggers disabled for #{table_name}")
-    end
   end
 end
