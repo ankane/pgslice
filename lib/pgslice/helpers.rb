@@ -189,12 +189,6 @@ module PgSlice
       value.is_a?(Numeric) || (value.is_a?(String) && value.match?(/\A\d+\z/))
     end
 
-    def id_type(value)
-      return :numeric if numeric_id?(value)
-      return :ulid if ulid?(value)
-      :unknown
-    end
-
     # Factory method to get the appropriate ID handler
     def id_handler(sample_id, connection = nil, table = nil, primary_key = nil)
       if ulid?(sample_id)
