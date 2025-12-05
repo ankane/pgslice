@@ -144,6 +144,64 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "unprep Items"
   end
 
+  def test_synchronize_missing_table
+    assert_error "Table not found", "synchronize Items"
+  end
+
+  def test_synchronize
+    run_command "prep Posts --no-partition"
+    assert table_exists?("Posts_intermediate")
+
+    run_command "fill Posts"
+    assert_equal 10000, count("Posts_intermediate")
+
+    # Modify a row in source to create a difference (use a nullable column)
+    execute %!UPDATE "Posts" SET "createdAt" = '2020-01-01' WHERE "Id" = 1!
+
+    # Run synchronize
+    run_command "synchronize Posts --window-size 1000", allow_stderr: true
+
+    # Verify the difference was fixed
+    result = execute(%!SELECT "createdAt" FROM "Posts_intermediate" WHERE "Id" = 1!)
+    assert_equal "2020-01-01 00:00:00", result.first["createdAt"]
+
+    run_command "unprep Posts"
+  end
+
+  def test_enable_retired_mirroring_missing_table
+    assert_error "Table not found", "enable_retired_mirroring Items"
+  end
+
+  def test_enable_retired_mirroring
+    run_command "prep Posts --no-partition"
+    run_command "fill Posts"
+    run_command "swap Posts"
+    assert table_exists?("Posts_retired")
+
+    run_command "enable_retired_mirroring Posts", allow_stderr: true
+
+    run_command "disable_retired_mirroring Posts", allow_stderr: true
+    run_command "unswap Posts"
+    run_command "unprep Posts"
+  end
+
+  def test_disable_retired_mirroring_missing_table
+    assert_error "Table not found", "disable_retired_mirroring Items"
+  end
+
+  def test_disable_retired_mirroring
+    run_command "prep Posts --no-partition"
+    run_command "fill Posts"
+    run_command "swap Posts"
+    assert table_exists?("Posts_retired")
+
+    run_command "enable_retired_mirroring Posts", allow_stderr: true
+    run_command "disable_retired_mirroring Posts", allow_stderr: true
+
+    run_command "unswap Posts"
+    run_command "unprep Posts"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
@@ -277,7 +335,7 @@ class PgSliceTest < Minitest::Test
     run_command command, error: message
   end
 
-  def run_command(command, error: nil)
+  def run_command(command, error: nil, allow_stderr: false)
     if verbose?
       puts "$ pgslice #{command}"
       puts
@@ -291,7 +349,7 @@ class PgSliceTest < Minitest::Test
     end
     if error
       assert_match error, stderr
-    else
+    elsif !allow_stderr
       assert_equal "", stderr
     end
     stdout
