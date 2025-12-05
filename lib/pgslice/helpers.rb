@@ -6,9 +6,6 @@ module PgSlice
       year: "YYYY"
     }
 
-    # ULID epoch start corresponding to 01/01/1970
-    DEFAULT_ULID = "00000H5A406P0C3DQMCQ5MV6WQ"
-
     protected
 
     # output
@@ -183,94 +180,6 @@ module PgSlice
 
     def quote_table(table)
       table.quote_table
-    end
-
-    def numeric_id?(value)
-      value.is_a?(Numeric) || (value.is_a?(String) && value.match?(/\A\d+\z/))
-    end
-
-    # Factory method to get the appropriate ID handler
-    def id_handler(sample_id, connection = nil, table = nil, primary_key = nil)
-      if ulid?(sample_id)
-        UlidHandler.new(connection, table, primary_key)
-      else
-        NumericHandler.new
-      end
-    end
-
-    class NumericHandler
-      def min_value
-        1
-      end
-
-      def predecessor(id)
-        id - 1
-      end
-
-      def should_continue?(current_id, max_id)
-        current_id < max_id
-      end
-
-      def batch_count(starting_id, max_id, batch_size)
-        ((max_id - starting_id) / batch_size.to_f).ceil
-      end
-
-      def batch_where_condition(primary_key, starting_id, batch_size, inclusive = false)
-        helpers = PgSlice::CLI.instance
-        operator = inclusive ? ">=" : ">"
-        "#{helpers.quote_ident(primary_key)} #{operator} #{helpers.quote(starting_id)} AND #{helpers.quote_ident(primary_key)} <= #{helpers.quote(starting_id + batch_size)}"
-      end
-
-      def next_starting_id(starting_id, batch_size)
-        starting_id + batch_size
-      end
-    end
-
-    class UlidHandler
-      def initialize(connection = nil, table = nil, primary_key = nil)
-        @connection = connection
-        @table = table
-        @primary_key = primary_key
-      end
-
-      def min_value
-        PgSlice::Helpers::DEFAULT_ULID
-      end
-
-      def predecessor(id)
-        # Use database lookup to find the actual predecessor
-        return PgSlice::Helpers::DEFAULT_ULID unless @connection && @table && @primary_key
-
-        query = <<~SQL
-          SELECT MAX(#{PG::Connection.quote_ident(@primary_key)})
-          FROM #{@table.quote_table}
-          WHERE #{PG::Connection.quote_ident(@primary_key)} < '#{id}'
-        SQL
-
-        log_sql query
-        result = @connection.exec(query)
-        predecessor_id = result[0]["max"]
-        predecessor_id || PgSlice::Helpers::DEFAULT_ULID
-      end
-
-      def should_continue?(current_id, max_id)
-        current_id < max_id
-      end
-
-      def batch_count(starting_id, max_id, batch_size)
-        nil  # Unknown for ULIDs
-      end
-
-      def batch_where_condition(primary_key, starting_id, batch_size, inclusive = false)
-        operator = inclusive ? ">=" : ">"
-        "#{PG::Connection.quote_ident(primary_key)} #{operator} '#{starting_id}'"
-      end
-
-      def next_starting_id(starting_id, batch_size)
-        # For ULIDs, we need to get the max ID from the current batch
-        # This will be handled in the fill logic
-        nil
-      end
     end
 
     def quote_no_schema(table)
