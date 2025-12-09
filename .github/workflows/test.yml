@@ -1,8 +1,20 @@
 name: test-matrix
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+run-name: Test ${{ github.event.pull_request.number || github.ref }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: Unit tests on Ruby:${{ matrix.ruby }} Postgres:${{ matrix.postgres }}
     strategy:
       fail-fast: false
       matrix:
@@ -11,13 +23,15 @@ jobs:
             postgres: 18
           - ruby: 3.4
             postgres: 17
+          - ruby: 3.4
+            postgres: 13
           - ruby: 3.3
             postgres: 16
           - ruby: 3.2
             postgres: 15
           - ruby: 3.1
             postgres: 14
-          - ruby: "3.0"
+          - ruby: 3.0
             postgres: 13
     steps:
       - uses: actions/checkout@v4
