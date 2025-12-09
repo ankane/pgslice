@@ -1,0 +1,45 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v0.7.1
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-gem:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+          bundler-cache: true
+
+      - name: Build gem
+        id: build
+        run: |
+          gem build pgslice.gemspec
+          GEM_FILE=$(ls pgslice-*.gem | head -n 1)
+          echo "GEM_FILE=$GEM_FILE" >> $GITHUB_OUTPUT
+          echo "GEM_NAME=$(basename $GEM_FILE .gem)" >> $GITHUB_OUTPUT
+          echo "Built gem: $GEM_FILE"
+          ls -lh pgslice-*.gem
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pgslice-gem
+          path: pgslice-*.gem
+          retention-days: 30
+
+      - name: Create GitHub Release (if tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: pgslice-*.gem
+          generate_release_notes: true
+
