@@ -14,7 +14,7 @@ run-name: Test ${{ github.event.pull_request.number || github.ref }}
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: Unit tests ${{ matrix.ruby }} ${{ matrix.postgres }}
+    name: Unit tests on Ruby:${{ matrix.ruby }} Postgres:${{ matrix.postgres }}
     strategy:
       fail-fast: false
       matrix:
