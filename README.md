@@ -62,7 +62,17 @@ You can also install it with [Homebrew](#homebrew) or [Docker](#docker).
   pgslice analyze <table>
   ```
 
-7. Swap the intermediate table with the original table
+7. Sync/Validate the tables
+
+This will ensure the two tables are definitely in sync. It should be a no-op, but will generate
+INSERT, UPDATE, and DELETE statements if discrepencies are discovered. On a production system,
+ensure you understand the `--window-size`, `--delay`, and `--delay-multiplier options`.
+
+```sh
+pgslice synchronize <table> [options]
+```
+
+8. Swap the intermediate table with the original table
 
   ```sh
   pgslice swap <table>
@@ -70,13 +80,15 @@ You can also install it with [Homebrew](#homebrew) or [Docker](#docker).
 
   The original table is renamed `<table>_retired` and the intermediate table is renamed `<table>`.
 
-8. Fill the rest (rows inserted between the first fill and the swap)
+9. Fill the rest (rows inserted between the first fill and the swap)
+
+This step should not be needed if you did the pgslice synchronize in step 7.
 
   ```sh
   pgslice fill <table> --swapped
   ```
 
-9. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/current/static/app-pgdump.html) and drop it
+10. Back up the retired table with a tool like [pg_dump](https://www.postgresql.org/docs/current/static/app-pgdump.html) and drop it
 
   ```sql
   pg_dump -c -Fc -t <table>_retired $PGSLICE_URL > <table>_retired.dump
