@@ -6,6 +6,9 @@ module PgSlice
       year: "YYYY"
     }
 
+    # ULID epoch start corresponding to 01/01/1970
+    DEFAULT_ULID = "00000H5A406P0C3DQMCQ5MV6WQ"
+
     protected
 
     # output
@@ -180,6 +183,120 @@ module PgSlice
 
     def quote_table(table)
       table.quote_table
+    end
+
+    # ULID helper methods
+    def ulid?(value)
+      return false unless value.is_a?(String)
+      # Match pure ULIDs or ULIDs with prefixes
+      value.match?(/\A[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}\z/) ||
+        value.match?(/.*[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}\z/)
+    end
+
+    def numeric_id?(value)
+      value.is_a?(Numeric) || (value.is_a?(String) && value.match?(/\A\d+\z/))
+    end
+
+    def id_type(value)
+      return :numeric if numeric_id?(value)
+      return :ulid if ulid?(value)
+      :unknown
+    end
+
+    # Factory method to get the appropriate ID handler
+    def id_handler(sample_id)
+      if ulid?(sample_id)
+        UlidHandler.new
+      else
+        NumericHandler.new
+      end
+    end
+
+    class NumericHandler
+      def min_value
+        1
+      end
+
+      def predecessor(id)
+        id - 1
+      end
+
+      def should_continue?(current_id, max_id)
+        return false if max_id.nil? || current_id.nil?
+        current_id < max_id
+      end
+
+      def batch_count(starting_id, max_id, batch_size)
+        return 0 if max_id.nil? || starting_id.nil?
+        ((max_id - starting_id) / batch_size.to_f).ceil
+      end
+
+      def batch_where_condition(primary_key, starting_id, batch_size, inclusive = false)
+        operator = inclusive ? ">=" : ">"
+        "#{PG::Connection.quote_ident(primary_key)} #{operator} #{starting_id} AND #{PG::Connection.quote_ident(primary_key)} <= #{starting_id + batch_size}"
+      end
+
+      def next_starting_id(starting_id, batch_size, table, primary_key, executor = nil)
+        # For numeric IDs, just add the batch size
+        starting_id + batch_size
+      end
+
+      def insert_query(batch_label, dest_table, fields, source_table, where, primary_key, batch_size)
+        <<~SQL
+          /* #{batch_label} */
+          INSERT INTO #{dest_table} (#{fields})
+              SELECT #{fields} FROM #{source_table}
+              WHERE #{where}
+              ON CONFLICT DO NOTHING
+        SQL
+      end
+    end
+
+    class UlidHandler
+      def min_value
+        PgSlice::Helpers::DEFAULT_ULID
+      end
+
+      def predecessor(id)
+        PgSlice::Helpers::DEFAULT_ULID
+      end
+
+      def should_continue?(current_id, max_id)
+        return false if max_id.nil? || current_id.nil?
+        current_id < max_id
+      end
+
+      def batch_count(starting_id, max_id, batch_size)
+        return 0 if max_id.nil? || starting_id.nil?
+        nil  # Unknown for ULIDs
+      end
+
+      def batch_where_condition(primary_key, starting_id, batch_size, inclusive = false)
+        operator = inclusive ? ">=" : ">"
+        "#{PG::Connection.quote_ident(primary_key)} #{operator} '#{starting_id}'"
+      end
+
+      def next_starting_id(starting_id, batch_size, table, primary_key, executor)
+        # For ULIDs, get the max ID from the batch we just processed
+        last_id_query = <<~SQL
+          SELECT MAX(#{PG::Connection.quote_ident(primary_key)}) FROM #{table.quote_table}
+          WHERE #{batch_where_condition(primary_key, starting_id, batch_size, false)}
+        SQL
+        result = executor.send(:execute, last_id_query)[0]["max"]
+        return result || starting_id
+      end
+
+      def insert_query(batch_label, dest_table, fields, source_table, where, primary_key, batch_size)
+        <<~SQL
+          /* #{batch_label} */
+          INSERT INTO #{dest_table} (#{fields})
+              SELECT #{fields} FROM #{source_table}
+              WHERE #{where}
+              ORDER BY #{PG::Connection.quote_ident(primary_key)}
+              LIMIT #{batch_size}
+              ON CONFLICT DO NOTHING
+        SQL
+      end
     end
 
     def quote_no_schema(table)

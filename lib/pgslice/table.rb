@@ -123,7 +123,23 @@ module PgSlice
       end
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
-      execute(query, params)[0]["max"].to_i
+      result = execute(query, params)[0]["max"]
+      
+      # For ULIDs, return as string (or nil if empty); for numeric, convert to int (0 if nil)
+      if result.nil?
+        # Check if we're dealing with ULIDs by sampling a row
+        sample_query = "SELECT #{quote_ident(primary_key)} FROM #{quote_table} LIMIT 1"
+        sample_result = execute(sample_query)[0]
+        if sample_result && sample_result[primary_key]
+          handler = id_handler(sample_result[primary_key])
+          return handler.is_a?(Helpers::UlidHandler) ? nil : 0
+        else
+          return 0  # Default to numeric (0) when no sample available
+        end
+      end
+      
+      handler = id_handler(result)
+      handler.is_a?(Helpers::NumericHandler) ? result.to_i : result
     end
 
     def min_id(primary_key, column, cast, starting_time, where)
@@ -132,7 +148,24 @@ module PgSlice
       conditions << "#{quote_ident(column)} >= #{sql_date(starting_time, cast)}" if starting_time
       conditions << where if where
       query << " WHERE #{conditions.join(" AND ")}" if conditions.any?
-      (execute(query)[0]["min"] || 1).to_i
+      result = execute(query)[0]["min"]
+      
+      # Return appropriate default and type based on primary key type
+      if result.nil?
+        # Check if we're dealing with ULIDs by sampling a row
+        sample_query = "SELECT #{quote_ident(primary_key)} FROM #{quote_table} LIMIT 1"
+        sample_result = execute(sample_query)[0]
+        if sample_result
+          handler = id_handler(sample_result[primary_key])
+          return handler.min_value
+        else
+          return 1  # Default numeric when no sample available
+        end
+      end
+      
+      # Return the actual result with proper type
+      handler = id_handler(result)
+      handler.is_a?(Helpers::NumericHandler) ? result.to_i : result
     end
 
     # ensure this returns partitions in the correct order
@@ -223,6 +256,10 @@ module PgSlice
 
     def sql_date(*args)
       PgSlice::CLI.instance.send(:sql_date, *args)
+    end
+
+    def id_handler(sample_id)
+      PgSlice::CLI.instance.send(:id_handler, sample_id)
     end
   end
 end
