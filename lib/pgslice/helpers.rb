@@ -327,6 +327,45 @@ module PgSlice
       stat_def.sub(/ FROM \S+/, " FROM #{quote_table(table)}").sub(/ STATISTICS .+ ON /, " STATISTICS #{quote_ident(stat_name)} ON ") + ";"
     end
 
+    # mirroring triggers
+
+    def enable_mirroring_triggers(table)
+      intermediate_table = table.intermediate_table
+      function_name = "#{table.name}_mirror_to_intermediate"
+      trigger_name = "#{table.name}_mirror_trigger"
+
+      queries = []
+
+      # create mirror function
+      queries << <<~SQL
+        CREATE OR REPLACE FUNCTION #{quote_ident(function_name)}()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            DELETE FROM #{quote_table(intermediate_table)} WHERE #{mirror_where_clause(table, 'OLD')};
+            RETURN OLD;
+          ELSIF TG_OP = 'UPDATE' THEN
+            UPDATE #{quote_table(intermediate_table)} SET #{mirror_set_clause(table)} WHERE #{mirror_where_clause(table, 'OLD')};
+            RETURN NEW;
+          ELSIF TG_OP = 'INSERT' THEN
+            INSERT INTO #{quote_table(intermediate_table)} (#{mirror_column_list(table)}) VALUES (#{mirror_new_tuple_list(table)});
+            RETURN NEW;
+          END IF;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+      SQL
+
+      # create trigger
+      queries << <<~SQL
+        CREATE TRIGGER #{quote_ident(trigger_name)}
+        AFTER INSERT OR UPDATE OR DELETE ON #{quote_table(table)}
+        FOR EACH ROW EXECUTE FUNCTION #{quote_ident(function_name)}();
+      SQL
+
+      run_queries(queries)
+    end
+
     # retired mirroring triggers
 
     def enable_retired_mirroring_triggers(table)
@@ -361,6 +400,25 @@ module PgSlice
         CREATE TRIGGER #{quote_ident(trigger_name)}
         AFTER INSERT OR UPDATE OR DELETE ON #{quote_table(table)}
         FOR EACH ROW EXECUTE FUNCTION #{quote_ident(function_name)}();
+      SQL
+
+      run_queries(queries)
+    end
+
+    def disable_mirroring_triggers(table)
+      function_name = "#{table.name}_mirror_to_intermediate"
+      trigger_name = "#{table.name}_mirror_trigger"
+
+      queries = []
+
+      # drop trigger
+      queries << <<~SQL
+        DROP TRIGGER IF EXISTS #{quote_ident(trigger_name)} ON #{quote_table(table)};
+      SQL
+
+      # drop function
+      queries << <<~SQL
+        DROP FUNCTION IF EXISTS #{quote_ident(function_name)}();
       SQL
 
       run_queries(queries)
