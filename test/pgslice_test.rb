@@ -144,6 +144,99 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "unprep Items"
   end
 
+  def test_enable_mirroring_missing_table
+    assert_error "Table not found", "enable_mirroring Items"
+  end
+
+  def test_enable_mirroring_missing_intermediate_table
+    assert_error "Table not found", "enable_mirroring Posts"
+  end
+
+  def test_disable_mirroring_missing_table
+    assert_error "Table not found", "disable_mirroring Items"
+  end
+
+  def test_enable_mirroring
+    run_command "prep Posts createdAt day"
+    assert table_exists?("Posts_intermediate")
+    
+    run_command "enable_mirroring Posts", expected_stderr: /Mirroring triggers enabled for Posts/
+    
+    # Verify trigger exists
+    trigger_result = execute <<~SQL, [quote_ident("Posts")]
+      SELECT tgname FROM pg_trigger
+      WHERE tgname = 'Posts_mirror_trigger'
+      AND tgrelid = $1::regclass
+    SQL
+    assert trigger_result.any?, "Mirror trigger should exist"
+    
+    # Verify function exists
+    function_result = execute <<~SQL
+      SELECT proname FROM pg_proc
+      WHERE proname = 'Posts_mirror_to_intermediate'
+    SQL
+    assert function_result.any?, "Mirror function should exist"
+  end
+
+  def test_disable_mirroring
+    run_command "prep Posts createdAt day"
+    run_command "enable_mirroring Posts", expected_stderr: /Mirroring triggers enabled for Posts/
+    
+    run_command "disable_mirroring Posts", expected_stderr: /Mirroring triggers disabled for Posts/
+    
+    # Verify trigger is removed
+    trigger_result = execute <<~SQL, [quote_ident("Posts")]
+      SELECT tgname FROM pg_trigger
+      WHERE tgname = 'Posts_mirror_trigger'
+      AND tgrelid = $1::regclass
+    SQL
+    assert !trigger_result.any?, "Mirror trigger should not exist"
+    
+    # Verify function is removed
+    function_result = execute <<~SQL
+      SELECT proname FROM pg_proc
+      WHERE proname = 'Posts_mirror_to_intermediate'
+    SQL
+    assert !function_result.any?, "Mirror function should not exist"
+  end
+
+  def test_mirroring_triggers_work
+    run_command "prep Posts createdAt day"
+    # Add partitions so we can insert data
+    run_command "add_partitions Posts --intermediate --past 1 --future 1"
+    run_command "enable_mirroring Posts", expected_stderr: /Mirroring triggers enabled for Posts/
+    
+    # Create users for foreign key constraints
+    user1_id = execute(%!INSERT INTO "Users" DEFAULT VALUES RETURNING "Id"!).first["Id"]
+    user2_id = execute(%!INSERT INTO "Users" DEFAULT VALUES RETURNING "Id"!).first["Id"]
+    
+    # Initially Posts has data from schema, but Posts_intermediate is empty
+    initial_posts_count = count("Posts")
+    assert_equal 0, count("Posts_intermediate")
+    
+    # Test INSERT mirroring - new row should appear in both tables
+    now = Time.now.utc
+    inserted_result = execute %!INSERT INTO "Posts" ("createdAt", "UserId") VALUES ($1, $2) RETURNING "Id"!, [now.iso8601, user1_id]
+    inserted_id = inserted_result.first["Id"]
+    assert_equal initial_posts_count + 1, count("Posts")
+    assert_equal 1, count("Posts_intermediate"), "INSERT should be mirrored to intermediate table"
+    
+    # Verify the inserted row exists in intermediate table
+    intermediate_row = execute(%!SELECT * FROM "Posts_intermediate" WHERE "Id" = $1!, [inserted_id]).first
+    assert intermediate_row, "Inserted row should exist in intermediate table"
+    assert_equal user1_id.to_s, intermediate_row["UserId"]
+    
+    # Test UPDATE mirroring - changes should be mirrored
+    execute %!UPDATE "Posts" SET "UserId" = $1 WHERE "Id" = $2!, [user2_id, inserted_id]
+    updated_intermediate = execute(%!SELECT "UserId" FROM "Posts_intermediate" WHERE "Id" = $1!, [inserted_id]).first
+    assert_equal user2_id.to_s, updated_intermediate["UserId"], "UPDATE should be mirrored to intermediate table"
+    
+    # Test DELETE mirroring - deletion should be mirrored
+    execute %!DELETE FROM "Posts" WHERE "Id" = $1!, [inserted_id]
+    assert_equal initial_posts_count, count("Posts")
+    assert_equal 0, count("Posts_intermediate"), "DELETE should be mirrored to intermediate table"
+  end
+
   private
 
   def assert_period(period, column: "createdAt", trigger_based: false, tablespace: false, version: nil)
@@ -277,7 +370,7 @@ class PgSliceTest < Minitest::Test
     run_command command, error: message
   end
 
-  def run_command(command, error: nil)
+  def run_command(command, error: nil, expected_stderr: nil)
     if verbose?
       puts "$ pgslice #{command}"
       puts
@@ -291,6 +384,8 @@ class PgSliceTest < Minitest::Test
     end
     if error
       assert_match error, stderr
+    elsif expected_stderr
+      assert_match expected_stderr, stderr
     else
       assert_equal "", stderr
     end
