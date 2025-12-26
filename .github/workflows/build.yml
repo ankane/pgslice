@@ -20,7 +20,7 @@ jobs:
           - ruby: "3.0"
             postgres: 13
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
