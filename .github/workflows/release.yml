@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -21,7 +24,7 @@ jobs:
           ruby-version: 3.3
           bundler-cache: true
 
-      - name: Update version from tag
+      - name: Update version from tag and commit
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           # Extract version from tag (remove 'v' prefix if present)
@@ -29,9 +32,17 @@ jobs:
           # Remove 'v' prefix if present
           VERSION="${VERSION#v}"
           echo "Updating version to: $VERSION"
+          # Checkout master branch
+          git checkout master
           # Update version.rb file
           sed -i "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" lib/pgslice/version.rb
           cat lib/pgslice/version.rb
+          # Commit and push the change
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lib/pgslice/version.rb
+          git commit -m "Update version to ${{ github.ref_name }}" || exit 0
+          git push origin master
 
       - name: Build gem
         id: build
