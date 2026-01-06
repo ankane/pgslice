@@ -1,3 +1,7 @@
+## 0.7.2 (unreleased)
+
+- Added support for Ruby 4.0
+
 ## 0.7.1 (2025-07-27)
 
 - Fixed `analyze` analyzing partitions twice with declarative partitioning
