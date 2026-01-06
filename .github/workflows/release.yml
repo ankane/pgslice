@@ -21,6 +21,18 @@ jobs:
           ruby-version: 3.3
           bundler-cache: true
 
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          # Extract version from tag (remove 'v' prefix if present)
+          VERSION="${{ github.ref_name }}"
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          echo "Updating version to: $VERSION"
+          # Update version.rb file
+          sed -i "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" lib/pgslice/version.rb
+          cat lib/pgslice/version.rb
+
       - name: Build gem
         id: build
         run: |
