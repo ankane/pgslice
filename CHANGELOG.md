@@ -1,4 +1,4 @@
-## 0.7.2 (unreleased)
+## 0.7.2 (2026-01-05)
 
 - Added support for Ruby 4.0
 
