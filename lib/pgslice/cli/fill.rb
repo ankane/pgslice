@@ -7,11 +7,15 @@ module PgSlice
     option :dest_table, desc: "Destination table"
     option :start, type: :numeric, desc: "Primary key to start"
     option :where, desc: "Conditions to filter"
-    option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
+    option :sleep, type: :numeric, default: 0, desc: "Seconds to sleep between batches"
     def fill(table)
       batch_size = options[:batch_size]
       if !batch_size.is_a?(Integer) || batch_size < 1
         abort "Batch size must be a positive integer"
+      end
+
+      if options[:sleep] < 0
+        abort "Sleep cannot be negative"
       end
 
       table = create_table(table)
@@ -98,7 +102,7 @@ module PgSlice
         starting_id += batch_size
         i += 1
 
-        if options[:sleep] && starting_id <= max_source_id
+        if options[:sleep] > 0 && starting_id <= max_source_id
           sleep(options[:sleep])
         end
       end

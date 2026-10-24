@@ -146,6 +146,12 @@ class PgSliceTest < Minitest::Test
     assert_error "Batch size must be a positive integer", "fill Posts --batch-size -1"
   end
 
+  def test_fill_negative_sleep
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate"
+    assert_error "Sleep cannot be negative", "fill Posts --sleep -0.001"
+  end
+
   def test_analyze_missing_table
     assert_error "Table not found", "analyze Items"
   end
