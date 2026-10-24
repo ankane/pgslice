@@ -128,6 +128,11 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "fill Items"
   end
 
+  def test_fill_no_partitions
+    run_command "prep Posts createdAt day"
+    assert_error "No partitions to fill", "fill Posts"
+  end
+
   def test_fill_float_batch_size
     run_command "prep Posts createdAt day"
     run_command "add_partitions Posts --intermediate"

@@ -46,6 +46,7 @@ module PgSlice
       end
 
       schema_table = period && declarative ? partitions.last : table
+      abort "No partitions to fill" unless schema_table
 
       primary_key = schema_table.primary_key[0]
       abort "No primary key" unless primary_key
