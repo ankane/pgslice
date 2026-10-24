@@ -9,6 +9,11 @@ module PgSlice
     option :where, desc: "Conditions to filter"
     option :sleep, type: :numeric, desc: "Seconds to sleep between batches"
     def fill(table)
+      batch_size = options[:batch_size]
+      unless batch_size.is_a?(Numeric) && batch_size.to_i == batch_size && batch_size.positive?
+        abort "Batch size must be a positive integer"
+      end
+
       table = create_table(table)
       source_table = create_table(options[:source_table]) if options[:source_table]
       dest_table = create_table(options[:dest_table]) if options[:dest_table]
@@ -64,7 +69,6 @@ module PgSlice
 
       starting_id = max_dest_id
       fields = source_table.columns.map { |c| quote_ident(c) }.join(", ")
-      batch_size = options[:batch_size]
 
       i = 1
       batch_count = ((max_source_id - starting_id) / batch_size.to_f).ceil
