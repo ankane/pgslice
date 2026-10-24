@@ -128,6 +128,24 @@ class PgSliceTest < Minitest::Test
     assert_error "Table not found", "fill Items"
   end
 
+  def test_fill_float_batch_size
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate"
+    assert_error "Batch size must be a positive integer", "fill Posts --batch-size 1.5"
+  end
+
+  def test_fill_zero_batch_size
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate"
+    assert_error "Batch size must be a positive integer", "fill Posts --batch-size 0"
+  end
+
+  def test_fill_negative_batch_size
+    run_command "prep Posts createdAt day"
+    run_command "add_partitions Posts --intermediate"
+    assert_error "Batch size must be a positive integer", "fill Posts --batch-size -1"
+  end
+
   def test_analyze_missing_table
     assert_error "Table not found", "analyze Items"
   end
