@@ -61,18 +61,20 @@ module PgSlice
       connection.exec_params(query, params).to_a
     end
 
-    def run_queries(queries)
+    def run_queries(queries, silent: false)
       connection.transaction do
         execute("SET LOCAL client_min_messages TO warning") unless options[:dry_run]
-        log_sql "BEGIN;"
-        log_sql
-        run_queries_without_transaction(queries)
-        log_sql "COMMIT;"
+        unless silent
+          log_sql "BEGIN;"
+          log_sql
+        end
+        run_queries_without_transaction(queries, silent: silent)
+        log_sql "COMMIT;" unless silent
       end
     end
 
-    def run_query(query)
-      log_sql query
+    def run_query(query, silent: false)
+      log_sql query unless silent
       unless options[:dry_run]
         begin
           execute(query)
@@ -80,12 +82,12 @@ module PgSlice
           abort "#{e.class.name}: #{e.message}"
         end
       end
-      log_sql
+      log_sql unless silent
     end
 
-    def run_queries_without_transaction(queries)
+    def run_queries_without_transaction(queries, silent: false)
       queries.each do |query|
-        run_query(query)
+        run_query(query, silent: silent)
       end
     end
 
@@ -167,7 +169,9 @@ module PgSlice
     end
 
     def quote(value)
-      if value.is_a?(Numeric)
+      if value.nil?
+        "NULL"
+      elsif value.is_a?(Numeric)
         value
       else
         connection.escape_literal(value)
@@ -204,6 +208,86 @@ module PgSlice
       # errors on duplicate names, but should be rare
       stat_name = "#{table}_#{m[1].split(", ").map { |v| v.gsub(/\W/i, "") }.join("_")}_stat"
       stat_def.sub(/ FROM \S+/, " FROM #{quote_table(table)}").sub(/ STATISTICS .+ ON /, " STATISTICS #{quote_ident(stat_name)} ON ") + ";"
+    end
+
+    # retired mirroring triggers
+
+    def enable_retired_mirroring_triggers(table)
+      retired_table = table.retired_table
+      function_name = "#{table.name}_mirror_to_retired"
+      trigger_name = "#{table.name}_retired_mirror_trigger"
+
+      queries = []
+
+      # create mirror function
+      queries << <<~SQL
+        CREATE OR REPLACE FUNCTION #{quote_ident(function_name)}()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            DELETE FROM #{quote_table(retired_table)} WHERE #{mirror_where_clause(table, 'OLD')};
+            RETURN OLD;
+          ELSIF TG_OP = 'UPDATE' THEN
+            UPDATE #{quote_table(retired_table)} SET #{mirror_set_clause(table)} WHERE #{mirror_where_clause(table, 'OLD')};
+            RETURN NEW;
+          ELSIF TG_OP = 'INSERT' THEN
+            INSERT INTO #{quote_table(retired_table)} (#{mirror_column_list(table)}) VALUES (#{mirror_new_tuple_list(table)});
+            RETURN NEW;
+          END IF;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+      SQL
+
+      # create trigger
+      queries << <<~SQL
+        CREATE TRIGGER #{quote_ident(trigger_name)}
+        AFTER INSERT OR UPDATE OR DELETE ON #{quote_table(table)}
+        FOR EACH ROW EXECUTE FUNCTION #{quote_ident(function_name)}();
+      SQL
+
+      run_queries(queries)
+    end
+
+    def mirror_where_clause(table, record)
+      primary_keys = table.primary_key
+      if primary_keys && primary_keys.any?
+        primary_keys.map { |pk| "#{quote_ident(pk)} = #{record}.#{quote_ident(pk)}" }.join(" AND ")
+      else
+        # fallback to all columns if no primary key
+        table.columns.map { |column| "#{quote_ident(column)} = #{record}.#{quote_ident(column)}" }.join(" AND ")
+      end
+    end
+
+    def mirror_set_clause(table)
+      table.columns.map { |column| "#{quote_ident(column)} = NEW.#{quote_ident(column)}" }.join(", ")
+    end
+
+    def mirror_column_list(table)
+      table.columns.map { |column| quote_ident(column) }.join(", ")
+    end
+
+    def mirror_new_tuple_list(table)
+      table.columns.map { |column| "NEW.#{quote_ident(column)}" }.join(", ")
+    end
+
+    def disable_retired_mirroring_triggers(table)
+      function_name = "#{table.name}_mirror_to_retired"
+      trigger_name = "#{table.name}_retired_mirror_trigger"
+
+      queries = []
+
+      # drop trigger
+      queries << <<~SQL
+        DROP TRIGGER IF EXISTS #{quote_ident(trigger_name)} ON #{quote_table(table)};
+      SQL
+
+      # drop function
+      queries << <<~SQL
+        DROP FUNCTION IF EXISTS #{quote_ident(function_name)}();
+      SQL
+
+      run_queries(queries)
     end
   end
 end
