@@ -8,6 +8,8 @@ jobs:
       matrix:
         include:
           - ruby: "4.0"
+            postgres: 19
+          - ruby: "4.0"
             postgres: 18
           - ruby: 3.4
             postgres: 17
