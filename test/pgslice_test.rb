@@ -418,7 +418,13 @@ class PgSliceTest < Minitest::Test
     SQL
     result = execute(query, [table_name])
     assert result.any?, "Missing extended statistics on #{table_name}"
-    assert_equal %!{"1, 2": 10002}!, result.first["n_distinct"]
+    # new format for Postgres 19
+    # https://github.com/postgres/postgres/commit/1f927cce44983ed59a3c1eccc95ad2946ac13b42
+    if server_version_num >= 190000
+      assert_equal %![{"attributes": [1, 2], "ndistinct": 10002}]!, result.first["n_distinct"]
+    else
+      assert_equal %!{"1, 2": 10002}!, result.first["n_distinct"]
+    end
   end
 
   def server_version_num
